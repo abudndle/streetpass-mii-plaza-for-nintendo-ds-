@@ -7,6 +7,8 @@
 #include "protocol.h"
 #include "storage.h"
 #include "wireless.h"
+#include "mii_bridge.h"
+#include "service_config.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -15,6 +17,9 @@ static SpdsPollStats last_poll;
 static int storage_ok;
 static unsigned total;
 static SpdsWireless radio;
+static SpdsServiceConfig service_cfg;
+static SpdsMii linked_mii;
+static int mii_loaded;
 static uint8_t outgoing[SPDS_WIRE_SIZE], incoming[SPDS_WIRE_SIZE];
 static const char *radio_status(void) {
     if (radio.mode == SPDS_WIFI_OFF) return "Off";
@@ -26,11 +31,28 @@ static const char *radio_status(void) {
     return "Radio error";
 }
 
+/* Import a previously saved Mii Maker DS profile without ever writing to
+ * the original .sav. Only 7-bit nickname travels on SPDS v1 radio packets;
+ * full Mii appearance remains in local mii.mds until a verified v2 exists.
+ */
+static int load_mii_from_sd(void) {
+    if (!storage_ok || !spds_service_read(save_dir,&service_cfg)) return 0;
+    int imported=spds_service_load_mii(save_dir,&service_cfg,&linked_mii);
+    if (imported<=0) return imported;
+    mii_loaded=1;
+    if(linked_mii.features[47]) { /* Mii Maker DS 'sharing allowed' policy */
+        spds_mii_radio_name(myself.name,&linked_mii);
+        if(spds_storage_save_profile(save_dir,&myself)!=0) return -1;
+        if(spds_encode(&myself,outgoing)!=0) return -1;
+    }
+    return 1;
+}
 static void draw(void) {
     consoleSelect(&top_screen);
     printf("\x1b[2J\x1b[1;3HSTREETPASS MII PLAZA DS");
     printf("\x1b[4;2HIndependent homebrew prototype");
     printf("\x1b[6;2HVisitor: %-20s", myself.name);
+    printf("\x1b[7;2HMaker Mii: %-20s",mii_loaded?linked_mii.name:"None linked");
     printf("\x1b[8;2HEncounters saved: %u", total);
     printf("\x1b[10;2HLocal radio: %-14s", radio_status());
     printf("\x1b[12;2H3DS link: requires companion");
@@ -44,12 +66,14 @@ static void draw(void) {
             last_poll.invalid, last_poll.io_errors);
     printf("\x1b[11;2HA: Export your profile");
     printf("\x1b[13;2HX: Check SD inbox");
+    printf("\x1b[14;2HY: Reload Mii Maker DS");
     printf("\x1b[15;2HB: Exit to loader");
     printf("\x1b[16;2HL: Host    R: Join/Scan");
     printf("\x1b[17;2HSELECT: Radio off");
     printf("\x1b[18;2HRX: %u TX: %u", radio.received, radio.sent);
     printf("\x1b[19;1HSD file exchange is a test");
     printf("\x1b[20;1Htransport, NOT radio StreetPass.");
+    printf("\x1b[21;1HPlaza Mii cache: %s",mii_loaded?"Ready":"Not linked");
     printf("\x1b[22;1HSTART: Refresh status");
 }
 static void poll_now(void) {
@@ -89,6 +113,7 @@ int main(void) {
             myself.nonce = (uint32_t)rand();
             spds_storage_save_profile(save_dir, &myself);
         }
+        if (spds_service_create(save_dir)) load_mii_from_sd();
         poll_now();
     }
     spds_encode(&myself, outgoing);
@@ -125,6 +150,10 @@ int main(void) {
                 else if (accepted == 0) ++last_poll.duplicates;
                 else ++last_poll.io_errors;
             } else ++last_poll.invalid;
+            draw();
+        }
+        if (down & KEY_Y) {
+            load_mii_from_sd();
             draw();
         }
         if (down & KEY_A) {

@@ -2,6 +2,16 @@
 
 An actively developed, independent homebrew adaptation targeting the original Nintendo 3DS **StreetPass Mii Plaza**, built for Nintendo DS/DS Lite flashcarts and DSi SD homebrew.
 
+## Mii Maker DS integration and portable folder
+
+The Plaza now contains a read-only parser for Mii Maker DS 8-KiB/64-KiB
+ROM-associated save snapshots and standalone 134-byte avatar packets,
+plus a durable SD Mii cache. Configure the save's location in
+`streetpass-plaza/service.cfg` to select the Personal Mii; no other
+homebrew application's cartridge save is modified. See
+[portable service folder and Mii integration](docs/PORTABLE_SERVICE.md).
+No SD file can autonomously run in the background of unrelated DS ROMs.
+
 ## Current verified progress
 
 - Bootable-format `.nds` homebrew **compiles** using the official BlocksDS Docker image; GitHub Actions uploads the `streetpass-plaza-ds-homebrew` artifact. Actual emulator and hardware boot tests remain outstanding.

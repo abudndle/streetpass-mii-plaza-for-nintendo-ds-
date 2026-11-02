@@ -26,5 +26,7 @@ test:
 	./build-host/test_protocol
 	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/protocol.c source/storage.c source/background.c tests/test_background.c -o build-host/test_background
 	./build-host/test_background
+	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/mii_bridge.c source/service_config.c source/storage.c source/protocol.c tests/test_mii_bridge.c -o build-host/test_mii_bridge
+	./build-host/test_mii_bridge
 	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py
 	python3 -m unittest discover -s tests -p 'test_*.py' -v
