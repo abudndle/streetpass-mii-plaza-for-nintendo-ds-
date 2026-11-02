@@ -22,6 +22,25 @@ int main(void){
     SpdsRelay third;spds_relay_init(&third,88,1);
     assert(spds_relay_accept(&third,next,sizeof next,1700000003,&decoded)==1);
     assert(!spds_relay_forward(&third,0,next));
+    /* Four relays can preserve a visitor's origin across five systems.
+     * This is the homebrew transport budget, not native 3DS CECD. */
+    SpdsRelay chain[5];
+    uint8_t transit[SPDS_RELAY_SIZE],forwarded[SPDS_RELAY_SIZE];
+    assert(spds_relay_encode(transit,&own,SPDS_RELAY_MAX_HOPS,1700000000));
+    for(unsigned i=0;i<5;i++) {
+        spds_relay_init(&chain[i],100u+i,1);
+        assert(spds_relay_accept(&chain[i],transit,sizeof transit,1700000001+i,&decoded)==1);
+        assert(decoded.sender_id==own.sender_id && decoded.nonce==own.nonce);
+        assert(!strcmp(decoded.name,own.name));
+        assert(spds_relay_accept(&chain[i],transit,sizeof transit,1700000001+i,&decoded)==0);
+        if(i<4) {
+            assert(spds_relay_forward(&chain[i],0,forwarded));
+            assert(spds_relay_decode(&decoded,&hops,&at,forwarded,sizeof forwarded));
+            assert(hops==SPDS_RELAY_MAX_HOPS-i-1);
+            memcpy(transit,forwarded,sizeof transit);
+        } else assert(!spds_relay_forward(&chain[i],0,forwarded));
+    }
+    assert(!spds_relay_encode(packet,&own,SPDS_RELAY_MAX_HOPS+1,1700000000));
     /* Malformed origin identity must never be written to the ledger. */
     SpdsRecord zero={0,1700000000,19,"Invalid"};
     /* The underlying SPDS encoder already rejects zero sender IDs. */
@@ -35,6 +54,6 @@ int main(void){
     spds_relay_init(&r,24,0);
     assert(spds_relay_accept(&r,next,sizeof next,1700000003,&decoded)==1);
     assert(!spds_relay_forward(&r,0,packet));
-    puts("PASS: relay CRC, duplicate, 2-hop cap, opt-in and malformed packet");
+    puts("PASS: relay CRC, duplicate, 4-hop cap, multi-system identity, opt-in and malformed packet");
     return 0;
 }
