@@ -50,6 +50,7 @@ static void draw(void) {
     printf("\x1b[18;2HRX: %u TX: %u", radio.received, radio.sent);
     printf("\x1b[19;1HSD file exchange is a test");
     printf("\x1b[20;1Htransport, NOT radio StreetPass.");
+    printf("\x1b[22;1HSTART: Refresh status");
 }
 static void poll_now(void) {
     if (storage_ok) {
@@ -134,7 +135,7 @@ int main(void) {
             }
             draw();
         }
-        if ((down & KEY_X) || ++frames >= 300) {
+        if ((down & (KEY_X | KEY_START)) || ++frames >= 300) {
             frames = 0;
             poll_now();
             draw();
