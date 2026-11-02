@@ -126,8 +126,9 @@ static void draw(void) {
             x+=phase<3u?phase:5u-phase;
             printf("\x1b[6;%uH%s",x,i==(int)room_selected?"   v":"    ");
             printf("\x1b[7;%uH  O  ",x);
-            printf("\x1b[8;%uH /|\\\\ ",x);
-            printf("\x1b[9;%uH / \\\\ ",x);
+            unsigned stride=(room_anim_frame/12u+(unsigned)i)%2u;
+            printf("\x1b[8;%uH%s",x,stride?" \\|/ ":" /|\\\\ ");
+            printf("\x1b[9;%uH%s",x,stride?"  /| ":" / \\\\ ");
             printf("\x1b[11;%uH%.9s",x,visitors_on_screen[i].name);
         }
         if(!visitor_count) printf("\x1b[9;2HNo visitors in this room");
