@@ -10,7 +10,7 @@
 static int path(char out[SPDS_PATH_MAX],const char *base,const char *filename) {
     if (!base || !filename || !out) return 0;
     int count=snprintf(out,SPDS_PATH_MAX,"%s/%s",base,filename);
-    return count>=0 && count<SPDS_PATH_MAX;
+    return count>=0 && (unsigned)count<SPDS_PATH_MAX;
 }
 int spds_service_create(const char *base) {
     if(!base || spds_storage_init(base)) return 0;
