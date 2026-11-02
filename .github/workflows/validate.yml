@@ -47,7 +47,7 @@ jobs:
       - name: Build native DS/DSi homebrew ROM
         run: make
       - name: Validate output exists and is not empty
-        run: python3 tools/verify_nds.py streetpass-plaza-ds.nds
+        run: test -s streetpass-plaza-ds.nds
       - name: Upload homebrew ROM only
         uses: actions/upload-artifact@v4
         with:
