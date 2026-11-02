@@ -18,7 +18,7 @@ The user's *private* decrypted `CTR-N-HMEE` (United States region) base NCCH was
 | shaders | 12 | 28,200 |
 | sound | 1 | 3,521,880 |
 
-This does not mean they are DS-ready. Archives, shader formats, textures, models, UI layouts, and audio require profiling and *private* platform-specific conversion. DS RAM/VRAM and GPU limits require level-of-detail, animation and texture streaming changes.
+Private preprocessing also successfully decoded 56 LZ10/LZ11 compressed files: 44 CGFX, six DARC layout archives, one CFNT font, three SMDH icons and two raw icon buffers. These remain only in the private development workspace. See [private pipeline](PRIVATE_ASSET_PIPELINE.md).\n\nThis does not mean they are DS-ready. Archives, shader formats, textures, models, UI layouts, and audio require profiling and *private* platform-specific conversion. DS RAM/VRAM and GPU limits require level-of-detail, animation and texture streaming changes.
 
 To recreate the metadata inventory **on your own computer**:
 

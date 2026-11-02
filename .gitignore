@@ -20,3 +20,6 @@ extracted/
 asset-dumps/
 *.sps
 encounters.tsv
+__pycache__/
+*.pyc
+private-*/
