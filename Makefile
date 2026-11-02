@@ -11,7 +11,9 @@ LIBS := -lnds9
 CFLAGS += -std=gnu11 -Wall -Wextra -Werror
 
 # No proprietary art is embedded. The SDK's default banner is used.
+ifeq ($(filter test,$(MAKECMDGOALS)),)
 include $(BLOCKSDS)/sys/default_makefiles/rom_arm9/Makefile
+endif
 
 .PHONY: test
 test:
