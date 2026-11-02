@@ -13,6 +13,7 @@
 #include "discovery.h"
 #include "bark_mode.h"
 #include "relay.h"
+#include "arrival_notice.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -33,6 +34,7 @@ static SpdsBarkMode bark;
 static int sleep_override;
 static uint8_t outgoing[SPDS_RELAY_SIZE], incoming[SPDS_RELAY_SIZE];
 static SpdsRelay relay;
+static SpdsArrivalNotice recent_arrival;
 static const char *radio_status(void) {
     if (radio.mode == SPDS_WIFI_OFF) return "Off";
     if (radio.phase == SPDS_PHASE_START) return "Starting";
@@ -78,6 +80,8 @@ static void draw(void) {
     consoleSelect(&top_screen);
     printf("\x1b[2J\x1b[1;3HSTREETPASS MII PLAZA DS");
     printf("\x1b[4;2HIndependent homebrew prototype");
+    if(recent_arrival.frames_left)
+        printf("\x1b[5;2HNew DS visitor: %.20s",recent_arrival.name);
     printf("\x1b[6;2HVisitor: %-20s", myself.name);
     printf("\x1b[7;2HMaker Mii: %-20s",mii_loaded?linked_mii.name:"None linked");
     printf("\x1b[8;2HEncounters saved: %u", total);
@@ -174,6 +178,7 @@ int main(void) {
         scanKeys();
         unsigned down = keysDown();
         spds_bark_tick(&bark,(keysHeld() & KEY_LID)!=0);
+        if(spds_arrival_notice_tick(&recent_arrival)) draw();
         if (down & KEY_B) break;
         if ((down & KEY_L) && storage_ok) {
             auto_radio=0;
@@ -224,7 +229,12 @@ int main(void) {
                                       myself.sender_id,(uint32_t)time(NULL));
                         if(stored>=0)
                             spds_wifi_queue_ack(&radio,guest.sender_id,guest.nonce);
-                        if(stored>0) {++total;++last_poll.accepted;}
+                        if(stored>0) {
+                            ++total;
+                            ++last_poll.accepted;
+                            spds_arrival_notice_show(&recent_arrival,guest.name,
+                                                    SPDS_ARRIVAL_DURATION_FRAMES);
+                        }
                         else if(stored==0) ++last_poll.duplicates;
                         else ++last_poll.io_errors;
                     } else ++last_poll.invalid;

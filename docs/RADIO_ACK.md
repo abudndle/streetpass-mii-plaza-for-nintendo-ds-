@@ -28,3 +28,12 @@ The portable host tests validate CRC, strict frame length/version,
 header reserved bytes, matching sender+nonce, and replay rejection.
 The existing BlocksDS build remains the only console toolchain.
 No Nintendo game assets, CECD saves or console keys are included.
+
+## Plaza welcome UI
+
+A newly saved encounter now displays a sanitized "New DS visitor" notice
+on the top screen for about ten seconds (600 frames). It cannot inject
+libnds console escape sequences, and rejected or duplicate encounters
+do not trigger a new greeting. The welcome is display-only; existing
+encounter storage and copyright-sensitive avatar assets are unchanged.
+Host tests cover timed expiration and untrusted nickname sanitization.
