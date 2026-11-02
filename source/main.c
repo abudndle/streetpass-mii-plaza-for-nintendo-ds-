@@ -116,6 +116,35 @@ static void save_puzzle_progress(void) {
 }
 static void draw(void) {
     consoleSelect(&top_screen);
+    if(room_open) {
+        printf("\x1b[2J\x1b[1;3HSTREETPASS PLAZA ROOM");
+        printf("\x1b[3;2HVisitors: %d  Page %u/%u",visitor_count,
+               spds_plaza_roster_page(&roster)+1u,spds_plaza_roster_pages(&roster));
+        for(int i=0;i<visitor_count && i<3;i++) {
+            unsigned x=2u+(unsigned)i*10u;
+            unsigned phase=(room_anim_frame/12u+(unsigned)i*3u)%6u;
+            x+=phase<3u?phase:5u-phase;
+            printf("\x1b[6;%uH%s",x,i==(int)room_selected?"   v":"    ");
+            printf("\x1b[7;%uH  O  ",x);
+            printf("\x1b[8;%uH /|\\\\ ",x);
+            printf("\x1b[9;%uH / \\\\ ",x);
+            printf("\x1b[11;%uH%.9s",x,visitors_on_screen[i].name);
+        }
+        if(!visitor_count) printf("\x1b[9;2HNo visitors in this room");
+        printf("\x1b[18;2HAnimated placeholder visitors");
+        consoleSelect(&bottom_screen);
+        printf("\x1b[2J\x1b[1;2HSELECT PLAZA VISITOR");
+        for(int i=0;i<visitor_count && i<3;i++)
+            printf("\x1b[%d;2H%c %-.24s",5+i*3,
+                   i==(int)room_selected?'>':' ',visitors_on_screen[i].name);
+        if(!visitor_count) printf("\x1b[7;2HNo visitors available");
+        printf("\x1b[16;2HD-Pad: Select visitor");
+        printf("\x1b[17;2HA: Open visitor details");
+        printf("\x1b[19;2HLEFT/RIGHT: Room page");
+        printf("\x1b[20;2HNo touch selection in room");
+        printf("\x1b[21;2HB: Back to visitor roster");
+        return;
+    }
     printf("\x1b[2J\x1b[1;3HSTREETPASS MII PLAZA DS");
     printf("\x1b[4;2HIndependent homebrew prototype");
     if(recent_arrival.frames_left)
@@ -165,27 +194,6 @@ static void draw(void) {
         printf("\x1b[20;2HA: Inspect  B/X: Back");
         printf("\x1b[21;2HPrototype: local DS rewards");
         printf("\x1b[22;2HNo original puzzle artwork");
-        return;
-    }
-    if(room_open) {
-        printf("\x1b[2J\x1b[1;2HPLAZA ROOM - DS PREVIEW");
-        printf("\x1b[3;2HVisitors: %d  Selected: %u",visitor_count,visitor_count?room_selected+1u:0u);
-        for(int i=0;i<visitor_count && i<3;i++) {
-            unsigned x=2u+(unsigned)i*10u;
-            unsigned phase=(room_anim_frame/12u+(unsigned)i*3u)%6u;
-            x+=phase<3u?phase:5u-phase;
-            printf("\x1b[6;%uH%s",x,i==(int)room_selected?"   v":"    ");
-            printf("\x1b[7;%uH  O  ",x);
-            printf("\x1b[8;%uH /|\\\\ ",x);
-            printf("\x1b[9;%uH / \\\\ ",x);
-            printf("\x1b[11;%uH%.9s",x,visitors_on_screen[i].name);
-        }
-        if(!visitor_count) printf("\x1b[9;2HNo visitors in this room");
-        printf("\x1b[17;2HLEFT/RIGHT: Change room page");
-        printf("\x1b[18;2HUP/DOWN: Select visitor");
-        printf("\x1b[19;2HA: Selected visitor details");
-        printf("\x1b[21;2HB: Back to visitor roster");
-        printf("\x1b[22;2HPlaceholder figures, not 3DS art");
         return;
     }
     if(roster_open) {
