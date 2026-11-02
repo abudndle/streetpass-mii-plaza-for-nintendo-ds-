@@ -34,5 +34,7 @@ test:
 	./build-host/test_discovery
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/bark_mode.c tests/test_bark_mode.c -o build-host/test_bark_mode
 	./build-host/test_bark_mode
+	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/relay.c source/protocol.c tests/test_relay.c -o build-host/test_relay
+	./build-host/test_relay
 	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py tools/index_darc.py
 	python3 -m unittest discover -s tests -p 'test_*.py' -v

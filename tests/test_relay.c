@@ -1,0 +1,33 @@
+#include "relay.h"
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+int main(void){
+    SpdsRecord own={12,1700000000,3,"Alice"},decoded;
+    SpdsRelay r;
+    uint8_t packet[SPDS_RELAY_SIZE],next[SPDS_RELAY_SIZE];
+    unsigned hops;uint32_t at;
+    spds_relay_init(&r,24,1);
+    assert(spds_relay_encode(packet,&own,2,1700000000));
+    assert(spds_relay_accept(&r,packet,sizeof packet,1700000001,&decoded)==1);
+    assert(decoded.sender_id==12&&r.received==1);
+    assert(spds_relay_accept(&r,packet,sizeof packet,1700000002,&decoded)==0);
+    assert(spds_relay_forward(&r,0,next));
+    assert(spds_relay_decode(&decoded,&hops,&at,next,sizeof next));
+    assert(hops==1&&at==1700000000);
+    SpdsRelay second;spds_relay_init(&second,44,1);
+    assert(spds_relay_accept(&second,next,sizeof next,1700000002,&decoded)==1);
+    assert(spds_relay_forward(&second,0,next));
+    assert(spds_relay_decode(&decoded,&hops,&at,next,sizeof next)&&hops==0);
+    SpdsRelay third;spds_relay_init(&third,88,1);
+    assert(spds_relay_accept(&third,next,sizeof next,1700000003,&decoded)==1);
+    assert(!spds_relay_forward(&third,0,next));
+    packet[13]^=1;
+    assert(spds_relay_accept(&r,packet,sizeof packet,1700000004,&decoded)==-1);
+    assert(!spds_relay_decode(&decoded,&hops,&at,packet,sizeof packet-1));
+    spds_relay_init(&r,24,0);
+    assert(spds_relay_accept(&r,next,sizeof next,1700000003,&decoded)==1);
+    assert(!spds_relay_forward(&r,0,packet));
+    puts("PASS: relay CRC, duplicate, 2-hop cap, opt-in and malformed packet");
+    return 0;
+}
