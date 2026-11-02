@@ -92,6 +92,15 @@ static int accept(const char *logpath, const SpdsRecord *r, uint32_t now) {
     if (fclose(f) != 0) ok = 0;
     return ok ? 1 : -1;
 }
+int spds_storage_receive(const char *base, const SpdsRecord *r,
+                         uint64_t own_id, uint32_t now) {
+    char logpath[SPDS_PATH_MAX];
+    if (!r || !base || !r->sender_id || r->sender_id == own_id)
+        return r && r->sender_id == own_id ? 0 : -1;
+    if (path_join(logpath, sizeof(logpath), base, "encounters.tsv"))
+        return -1;
+    return accept(logpath, r, now);
+}
 int spds_storage_poll(const char *base, uint64_t own_id,
                       uint32_t now, SpdsPollStats *stats) {
     char dir[SPDS_PATH_MAX], logpath[SPDS_PATH_MAX], full[SPDS_PATH_MAX];

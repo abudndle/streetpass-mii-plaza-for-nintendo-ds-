@@ -7,7 +7,8 @@ GAME_TITLE := StreetPass Plaza DS
 GAME_SUBTITLE := DS and DSi homebrew
 GAME_AUTHOR := Independent homebrew
 SOURCEDIRS := source
-LIBS := -lnds9
+LIBS := -ldswifi9 -lnds9
+ARM7ELF := $(BLOCKSDS)/sys/arm7/main_core/arm7_dswifi_maxmod.elf
 CFLAGS += -std=gnu11 -Wall -Wextra -Werror
 
 # No proprietary art is embedded. The SDK's default banner is used.

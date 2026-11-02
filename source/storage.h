@@ -18,6 +18,10 @@ int spds_storage_load_profile(const char *base, SpdsRecord *profile);
 int spds_storage_save_profile(const char *base, const SpdsRecord *profile);
 int spds_storage_poll(const char *base, uint64_t own_id,
                       uint32_t received_at, SpdsPollStats *stats);
+/* Insert an already decoded radio encounter, same cooldown as SD import.
+ * 1 accepted, 0 duplicate/own identity, -1 storage error. */
+int spds_storage_receive(const char *base, const SpdsRecord *record,
+                         uint64_t own_id, uint32_t received_at);
 int spds_storage_total(const char *base, unsigned *total);
 
 #endif
