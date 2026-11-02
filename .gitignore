@@ -1,26 +1,22 @@
-# Nintendo proprietary assets and ROMs
-*.3ds
-*.cci
-*.cia
-*.cxi
-*.ncch
-*.nds
-*.srl
-*.app
-*.rom
-*.sav
-*.darc
-*.bcmdl
-*.bcres
-private/
-assets/original/
-romfs/
-exefs/
-
 # Build outputs
 build/
-dist/
-*.o
+build-host/
+*.nds
 *.elf
 *.map
-__pycache__/
+*.o
+*.d
+# Private 3DS files/extracts - never commit
+*.cia
+*.ncch
+*.cxi
+*.3ds
+*.romfs
+*.exefs
+*.tik
+*.app
+private/
+extracted/
+asset-dumps/
+*.sps
+encounters.tsv

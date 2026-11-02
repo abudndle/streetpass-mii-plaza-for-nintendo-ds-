@@ -1,23 +1,37 @@
-name: Validate StreetPass DS scaffold
+name: Validate DS Plaza
 on:
   push:
-    branches: [main]
+    branches: [main, 'dev/**', 'feature/**']
   pull_request:
   workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *'
+
+concurrency:
+  group: dsplaza-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
-concurrency:
-  group: streetpass-validate-${{ github.ref }}
-  cancel-in-progress: true
+
 jobs:
   host-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Validate source and repository contracts
-        run: python -m unittest discover -s tests -v
+      - name: Host codec and storage tests
+        run: make test
+      - name: Verify proprietary files are absent
+        run: |
+          python3 - <<'PY'
+          import pathlib, sys
+          forbidden = {'.cia', '.ncch', '.cxi', '.3ds', '.romfs', '.exefs', '.tik'}
+          paths = [str(p) for p in pathlib.Path('.').rglob('*')
+                   if p.is_file() and '.git' not in p.parts
+                   and p.suffix.lower() in forbidden]
+          if paths:
+              sys.exit('Proprietary/ROM files must stay private: ' + ', '.join(paths))
+          PY
+  # Build on self-hosted runners with BlocksDS preinstalled, or manually using 'make'.
+  # Do NOT upload Nintendo game files, extracted assets or their converted derivatives.
