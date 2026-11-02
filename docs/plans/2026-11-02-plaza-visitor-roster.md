@@ -27,13 +27,13 @@ Preserve existing radio, storage, and Mii data; never commit Nintendo binaries, 
 **Interfaces:** `spds_visitor_list_page(base,offset,out,capacity)` returns total count and writes only requested entries.
 - [x] Check empty/off-end page, argument rejection and first page in existing visitor test.
 - [x] Implement bounded FAT directory enumeration and preserve `spds_visitor_list`.
-- [ ] Verify via `make test` on GitHub CI.
+- [x] Verify via `make test` on GitHub CI.
 
 ### Task 3: Two-screen BlocksDS UI
 **Files:** Modify `source/main.c`, add `docs/PLAZA_VISITOR_ROSTER.md`.
 **Interfaces:** X roster switch, A info, B back, UP/DOWN selection, LEFT/RIGHT and touch paging.
 - [x] Integrate roster model and cached visitor enumeration.
-- [ ] Run host suite and BlocksDS ROM build through GitHub Actions.
+- [x] Run host suite and BlocksDS ROM build through GitHub Actions.
 - [ ] Review compiled ROM in melonDS when emulator is available; do not claim a verified boot without screenshot/logs.
 
 **Unresolved:** Original 3DS appearance and real-hardware radio remain dependent on private authorized assets and emulator/console testing.
