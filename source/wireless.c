@@ -87,6 +87,18 @@ static int tx_frame(SpdsWireless *r,const uint8_t *frame,unsigned length) {
         return Wifi_MultiplayerClientToHostDataTxFrame(frame,length)>=0;
     return 0;
 }
+int spds_wifi_send_relay(SpdsWireless *r,const uint8_t frame[SPDS_RELAY_SIZE]) {
+    if(!r || !frame || r->phase!=SPDS_PHASE_LINKED) return 0;
+    SpdsRecord record;
+    unsigned hops;
+    uint32_t originated;
+    if(!spds_relay_decode(&record,&hops,&originated,frame,SPDS_RELAY_SIZE))
+        return 0;
+    if(!tx_frame(r,frame,SPDS_RELAY_SIZE)) return 0;
+    ++r->sent;
+    spds_ack_tracker_track(&r->ack,record.sender_id,record.nonce);
+    return 1;
+}
 int spds_wifi_tick(SpdsWireless *r,
                    const uint8_t outgoing[SPDS_RELAY_SIZE],
                    uint8_t incoming[SPDS_RELAY_SIZE]) {
