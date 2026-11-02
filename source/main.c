@@ -4,6 +4,9 @@
 #include <nds.h>
 #include <stdio.h>
 
+static PrintConsole bottomScreen;
+static PrintConsole topScreen;
+
 static void draw_bottom(void) {
     consoleSelect(&bottomScreen);
     consoleClear();
@@ -16,8 +19,6 @@ static void draw_bottom(void) {
     iprintf("Original game assets are\n");
     iprintf("not included.\n");
 }
-static PrintConsole bottomScreen;
-static PrintConsole topScreen;
 
 int main(void) {
     videoSetMode(MODE_0_2D);
