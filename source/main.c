@@ -120,6 +120,11 @@ static void draw(void) {
         printf("\x1b[2J\x1b[1;3HSTREETPASS PLAZA ROOM");
         printf("\x1b[3;2HVisitors: %d  Page %u/%u",visitor_count,
                spds_plaza_roster_page(&roster)+1u,spds_plaza_roster_pages(&roster));
+        printf("\x1b[4;2H+----------------------------+");
+        printf("\x1b[5;2H|                            |");
+        printf("\x1b[12;2H+----------------------------+");
+        printf("\x1b[13;2H  .  .  .  .  .  .  .  .");
+        printf("\x1b[14;2H==============================");
         for(int i=0;i<visitor_count && i<3;i++) {
             unsigned x=2u+(unsigned)i*10u;
             unsigned phase=(room_anim_frame/12u+(unsigned)i*3u)%6u;
@@ -132,7 +137,8 @@ static void draw(void) {
             printf("\x1b[11;%uH%.9s",x,visitors_on_screen[i].name);
         }
         if(!visitor_count) printf("\x1b[9;2HNo visitors in this room");
-        printf("\x1b[18;2HAnimated placeholder visitors");
+        printf("\x1b[16;2HPlaza stage / animated visitors");
+        printf("\x1b[18;2HOriginal 3DS art not included");
         consoleSelect(&bottom_screen);
         printf("\x1b[2J\x1b[1;2HSELECT PLAZA VISITOR");
         for(int i=0;i<visitor_count && i<3;i++)
