@@ -233,6 +233,22 @@ int spds_mii_from_file(SpdsMii *out,const char *path) {
     free(bytes);
     return ok;
 }
+int spds_mii_from_file_slot(SpdsMii *out,const char *path,unsigned slot) {
+    if(!out || !path || !*path || slot>=SLOTS) return 0;
+    FILE *f=fopen(path,"rb");
+    if(!f) return 0;
+    if(fseek(f,0,SEEK_END)) { fclose(f); return 0; }
+    long n=ftell(f);
+    if(n!=COMPACT_BYTES && n!=LEGACY_BYTES) { fclose(f); return 0; }
+    if(fseek(f,0,SEEK_SET)) { fclose(f); return 0; }
+    uint8_t *bytes=(uint8_t*)malloc((size_t)n);
+    if(!bytes) { fclose(f); return 0; }
+    int ok=fread(bytes,1,(size_t)n,f)==(size_t)n && !ferror(f);
+    if(fclose(f)) ok=0;
+    if(ok) ok=spds_mii_from_image_slot(out,bytes,(size_t)n,slot);
+    free(bytes);
+    return ok;
+}
 static int cache_path(char *out,size_t n,const char *base) {
     if(!out || !base) return 0;
     int count=snprintf(out,n,"%s/mii.mds",base);

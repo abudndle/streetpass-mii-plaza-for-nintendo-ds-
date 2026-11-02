@@ -27,6 +27,7 @@ int spds_mii_from_image(SpdsMii *out, const uint8_t *bytes, size_t length);
 int spds_mii_from_image_slot(SpdsMii *out, const uint8_t *bytes, size_t length, unsigned slot);
 /* Read an explicit file supplied by the user, never search arbitrary saves. */
 int spds_mii_from_file(SpdsMii *out, const char *path);
+int spds_mii_from_file_slot(SpdsMii *out, const char *path, unsigned slot);
 int spds_mii_cache_read(SpdsMii *out, const char *service_dir);
 int spds_mii_cache_write(const SpdsMii *mii, const char *service_dir);
 /* Produce 7-bit safe nickname for current SPDS v1 exchange. */
