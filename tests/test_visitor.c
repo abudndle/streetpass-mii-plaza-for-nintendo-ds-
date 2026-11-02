@@ -57,6 +57,12 @@ int main(void) {
     assert(spds_visitor_list(base,shown,3)==1);
     assert(!strcmp(shown[0].name,"Real DS Mii"));
     assert(spds_visitor_list(base,NULL,0)==1);
+    strcpy(shown[0].name,"Unmodified");
+    assert(spds_visitor_list_page(base,1,shown,1)==1);
+    assert(!strcmp(shown[0].name,"Unmodified"));
+    assert(spds_visitor_list_page(base,0,shown,1)==1);
+    assert(!strcmp(shown[0].name,"Real DS Mii"));
+    assert(spds_visitor_list_page(base,0,NULL,1)==-1);
     /* A duplicate pass does not destroy the visitor's avatar. */
     f=fopen(incoming,"wb");assert(f);
     assert(fwrite(wire,1,sizeof wire,f)==sizeof wire);assert(fclose(f)==0);
