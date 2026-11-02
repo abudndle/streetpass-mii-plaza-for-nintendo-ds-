@@ -20,3 +20,6 @@ test:
 	@mkdir -p build-host
 	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/protocol.c source/storage.c tests/test_protocol.c -o build-host/test_protocol
 	./build-host/test_protocol
+	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/protocol.c source/storage.c source/background.c tests/test_background.c -o build-host/test_background
+	./build-host/test_background
+	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py
