@@ -166,20 +166,20 @@ static void draw(void) {
         return;
     }
     if(room_open) {
-        printf("\\x1b[2J\\x1b[1;2HPLAZA ROOM - DS PREVIEW");
-        printf("\\x1b[3;2HVisitors in this room: %d",visitor_count);
+        printf("\x1b[2J\x1b[1;2HPLAZA ROOM - DS PREVIEW");
+        printf("\x1b[3;2HVisitors in this room: %d",visitor_count);
         for(int i=0;i<visitor_count && i<3;i++) {
             unsigned x=2u+(unsigned)i*10u;
-            printf("\\x1b[7;%uH  O  ",x);
-            printf("\\x1b[8;%uH /|\\\\ ",x);
-            printf("\\x1b[9;%uH / \\\\ ",x);
-            printf("\\x1b[11;%uH%.9s",x,visitors_on_screen[i].name);
+            printf("\x1b[7;%uH  O  ",x);
+            printf("\x1b[8;%uH /|\\\\ ",x);
+            printf("\x1b[9;%uH / \\\\ ",x);
+            printf("\x1b[11;%uH%.9s",x,visitors_on_screen[i].name);
         }
-        if(!visitor_count) printf("\\x1b[9;2HNo visitors in this room");
-        printf("\\x1b[17;2HLEFT/RIGHT: Change room page");
-        printf("\\x1b[19;2HA: Visitor details");
-        printf("\\x1b[21;2HB: Back to visitor roster");
-        printf("\\x1b[22;2HPlaceholder figures, not 3DS art");
+        if(!visitor_count) printf("\x1b[9;2HNo visitors in this room");
+        printf("\x1b[17;2HLEFT/RIGHT: Change room page");
+        printf("\x1b[19;2HA: Visitor details");
+        printf("\x1b[21;2HB: Back to visitor roster");
+        printf("\x1b[22;2HPlaceholder figures, not 3DS art");
         return;
     }
     if(roster_open) {
