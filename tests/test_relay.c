@@ -22,6 +22,13 @@ int main(void){
     SpdsRelay third;spds_relay_init(&third,88,1);
     assert(spds_relay_accept(&third,next,sizeof next,1700000003,&decoded)==1);
     assert(!spds_relay_forward(&third,0,next));
+    /* Malformed origin identity must never be written to the ledger. */
+    SpdsRecord zero={0,1700000000,19,"Invalid"};
+    assert(spds_relay_encode(packet,&zero,2,1700000000));
+    assert(spds_relay_accept(&r,packet,sizeof packet,1700000001,&decoded)==-1);
+    assert(spds_relay_encode(packet,&own,2,1700000000));
+    /* Future timestamps are bounded without overflow at UINT32_MAX. */
+    assert(spds_relay_accept(&r,packet,sizeof packet,0xffffffffu,&decoded)==-1);
     packet[13]^=1;
     assert(spds_relay_accept(&r,packet,sizeof packet,1700000004,&decoded)==-1);
     assert(!spds_relay_decode(&decoded,&hops,&at,packet,sizeof packet-1));

@@ -25,10 +25,11 @@ int spds_relay_accept(SpdsRelay *r,const uint8_t *p,unsigned n,uint32_t now,Spds
     if(!r||!out)return -1;
     SpdsRecord src;unsigned hops;uint32_t when;
     if(!spds_relay_decode(&src,&hops,&when,p,n))return -1;
+    if(src.sender_id==0)return -1;
     if(src.sender_id==r->own_id)return 0;
     /* Reject stale/future traffic if both systems have reasonable RTC times. */
     if(now>=1577836800u && when>=1577836800u &&
-       (when>now+300u||(now>when&&now-when>120u)))return -1;
+       ((when>now && when-now>300u)||(now>when&&now-when>120u)))return -1;
     for(unsigned i=0;i<SPDS_RELAY_CACHE;i++){
         SpdsRelaySeen *seen=&r->seen[i];
         if(seen->sender==src.sender_id&&seen->nonce==src.nonce&&
