@@ -33,6 +33,7 @@ static int visitor_count;
 static SpdsPlazaRoster roster;
 static int roster_open;
 static int room_open;
+static unsigned room_selected;
 static int auto_radio;
 static unsigned role_check_frames;
 static SpdsBarkMode bark;
@@ -167,9 +168,10 @@ static void draw(void) {
     }
     if(room_open) {
         printf("\x1b[2J\x1b[1;2HPLAZA ROOM - DS PREVIEW");
-        printf("\x1b[3;2HVisitors in this room: %d",visitor_count);
+        printf("\x1b[3;2HVisitors: %d  Selected: %u",visitor_count,visitor_count?room_selected+1u:0u);
         for(int i=0;i<visitor_count && i<3;i++) {
             unsigned x=2u+(unsigned)i*10u;
+            printf("\x1b[6;%uH%s",x,i==(int)room_selected?"   v":"    ");
             printf("\x1b[7;%uH  O  ",x);
             printf("\x1b[8;%uH /|\\\\ ",x);
             printf("\x1b[9;%uH / \\\\ ",x);
@@ -177,7 +179,8 @@ static void draw(void) {
         }
         if(!visitor_count) printf("\x1b[9;2HNo visitors in this room");
         printf("\x1b[17;2HLEFT/RIGHT: Change room page");
-        printf("\x1b[19;2HA: Visitor details");
+        printf("\x1b[18;2HUP/DOWN: Select visitor");
+        printf("\x1b[19;2HA: Selected visitor details");
         printf("\x1b[21;2HB: Back to visitor roster");
         printf("\x1b[22;2HPlaceholder figures, not 3DS art");
         return;
@@ -324,10 +327,19 @@ int main(void) {
             if(down & KEY_B) {room_open=0;roster_open=1;draw();continue;}
             if(down & (KEY_LEFT|KEY_RIGHT)) {
                 spds_plaza_roster_change_page(&roster,(down & KEY_LEFT)?-1:1);
+                room_selected=0;
                 refresh_roster();draw();continue;
             }
-            if(down & KEY_A) {room_open=0;roster_open=1;
-                spds_plaza_roster_show_detail(&roster);draw();continue;}
+            if(visitor_count && (down & (KEY_UP|KEY_DOWN))) {
+                if(down & KEY_UP) room_selected=(room_selected+(unsigned)visitor_count-1u)%(unsigned)visitor_count;
+                else room_selected=(room_selected+1u)%(unsigned)visitor_count;
+                draw();continue;
+            }
+            if(visitor_count && (down & KEY_A)) {
+                roster.selected=spds_plaza_roster_page(&roster)*SPDS_PLAZA_PAGE_SIZE+room_selected;
+                room_open=0;roster_open=1;
+                spds_plaza_roster_show_detail(&roster);draw();continue;
+            }
             continue;
         }
         if (down & KEY_B) {
@@ -344,7 +356,7 @@ int main(void) {
             draw();
         }
         if(roster_open && (down & KEY_START)) {
-            room_open=1;roster_open=0;draw();continue;
+            room_selected=0;room_open=1;roster_open=0;draw();continue;
         }
         if(roster_open && (down & KEY_Y)) {
             puzzle_open=1;
