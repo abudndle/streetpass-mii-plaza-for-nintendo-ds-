@@ -30,5 +30,7 @@ test:
 	./build-host/test_mii_bridge
 	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/visitor.c source/mii_bridge.c source/storage.c source/protocol.c tests/test_visitor.c -o build-host/test_visitor
 	./build-host/test_visitor
+	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/discovery.c tests/test_discovery.c -o build-host/test_discovery
+	./build-host/test_discovery
 	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py tools/index_darc.py
 	python3 -m unittest discover -s tests -p 'test_*.py' -v

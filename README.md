@@ -29,6 +29,14 @@ No SD file can autonomously run in the background of unrelated DS ROMs.
 - [Private NCCH asset inventory and LZ decoder](docs/PRIVATE_ASSET_PIPELINE.md): all 115 RomFS file entries mapped and 56 compressed resources decoded from the user-provided base NCCH offline; *no copyrighted assets on GitHub*.
 - Automated CI: host tests every five minutes plus native ROM build and artifact on pushes/PRs/manual runs.
 
+## Optional automatic local wireless
+
+Set `radio_enabled=1` in `streetpass-plaza/service.cfg` to try
+host/client cycling automatically **while Plaza is running**.
+The independent radio link is experimental and is not guaranteed to
+work in closed-lid sleep, inside unrelated DS ROMs, or as native 3DS
+StreetPass. See [automatic discovery](docs/AUTOMATIC_DISCOVERY.md).
+
 ## Controls (current prototype)
 
 | Input | Action |

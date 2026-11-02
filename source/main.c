@@ -10,6 +10,7 @@
 #include "mii_bridge.h"
 #include "service_config.h"
 #include "visitor.h"
+#include "discovery.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -24,6 +25,8 @@ static int mii_loaded;
 static SpdsVisitorStats visitor_stats;
 static SpdsMii visitors_on_screen[3];
 static int visitor_count;
+static int auto_radio;
+static unsigned role_check_frames;
 static uint8_t outgoing[SPDS_WIRE_SIZE], incoming[SPDS_WIRE_SIZE];
 static const char *radio_status(void) {
     if (radio.mode == SPDS_WIFI_OFF) return "Off";
@@ -41,6 +44,7 @@ static const char *radio_status(void) {
  */
 static int load_mii_from_sd(void) {
     if (!storage_ok || !spds_service_read(save_dir,&service_cfg)) return 0;
+    auto_radio=service_cfg.enabled && service_cfg.radio_enabled;
     int imported=spds_service_load_mii(save_dir,&service_cfg,&linked_mii);
     if (imported<=0) return imported;
     mii_loaded=1;
@@ -70,6 +74,7 @@ static void draw(void) {
     printf("\x1b[8;2HEncounters saved: %u", total);
     printf("\x1b[9;2HFull-Mii visitors: %u",visitor_stats.accepted);
     printf("\x1b[10;2HLocal radio: %-14s", radio_status());
+    printf("\x1b[11;2HAuto scan: %s",auto_radio?"Enabled":"Disabled");
     printf("\x1b[12;2H3DS link: requires companion");
     printf("\x1b[14;2HBackground: menu process only");
     printf("\x1b[16;2HRecent saved visitor Miis:");
@@ -156,18 +161,35 @@ int main(void) {
         unsigned down = keysDown();
         if (down & KEY_B) break;
         if ((down & KEY_L) && storage_ok) {
+            auto_radio=0;
             spds_wifi_stop(&radio);
             spds_wifi_start(&radio, SPDS_WIFI_HOST);
             draw();
         }
         if ((down & KEY_R) && storage_ok) {
+            auto_radio=0;
             spds_wifi_stop(&radio);
             spds_wifi_start(&radio, SPDS_WIFI_CLIENT);
             draw();
         }
         if (down & KEY_SELECT) {
+            auto_radio=0;
             spds_wifi_stop(&radio);
             draw();
+        }
+        /* Only the actively running Plaza/menu can perform this polling.
+         * Mode changes are intentionally slow to conserve startup overhead. */
+        if(auto_radio && storage_ok && ++role_check_frames>=60) {
+            role_check_frames=0;
+            SpdsDiscoveryRole desired=spds_discovery_role(
+                myself.sender_id,(uint32_t)time(NULL));
+            enum SpdsWirelessMode target=
+                desired==SPDS_DISCOVER_HOST ? SPDS_WIFI_HOST:SPDS_WIFI_CLIENT;
+            if(radio.mode!=target || radio.phase==SPDS_PHASE_ERROR) {
+                spds_wifi_stop(&radio);
+                spds_wifi_start(&radio,target);
+                draw();
+            }
         }
         if (spds_wifi_tick(&radio, outgoing, incoming)) {
             SpdsRecord guest;
