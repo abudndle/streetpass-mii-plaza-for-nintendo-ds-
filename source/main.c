@@ -33,6 +33,10 @@ static int visitor_count;
 static SpdsPlazaRoster roster;
 static int roster_open;
 static int room_open;
+static int mii_picker_open;
+static unsigned mii_picker_slot;
+static SpdsMii mii_picker_preview;
+static int mii_picker_valid;
 static unsigned room_selected;
 static unsigned room_anim_frame;
 static int auto_radio;
@@ -114,8 +118,32 @@ static void save_puzzle_progress(void) {
         else ++puzzle_save_errors;
     }
 }
+static int preview_mii_slot(void) {
+    mii_picker_valid=0;
+    if(!storage_ok || !spds_service_read(save_dir,&service_cfg) || !service_cfg.mii_source[0]) return 0;
+    char path[SPDS_PATH_MAX];
+    int absolute=strchr(service_cfg.mii_source,':')!=NULL || service_cfg.mii_source[0]=='/';
+    int n=absolute?snprintf(path,sizeof path,"%s",service_cfg.mii_source):
+        snprintf(path,sizeof path,"%s/%s",save_dir,service_cfg.mii_source);
+    if(n<0 || n>=(int)sizeof path) return 0;
+    mii_picker_valid=spds_mii_from_file_slot(&mii_picker_preview,path,mii_picker_slot);
+    return mii_picker_valid;
+}
 static void draw(void) {
     consoleSelect(&top_screen);
+    if(mii_picker_open) {
+        printf("\x1b[2J\x1b[2;2HMII MAKER GALLERY");
+        printf("\x1b[5;2HSlot %u / 100",mii_picker_slot+1u);
+        printf("\x1b[7;2H%s",mii_picker_valid?mii_picker_preview.name:"Empty or unavailable");
+        consoleSelect(&bottom_screen);
+        printf("\x1b[2J\x1b[2;2HCHOOSE YOUR PLAZA MII");
+        printf("\x1b[6;2HLEFT/RIGHT: Change slot");
+        printf("\x1b[8;2HA: Confirm shareable Mii");
+        printf("\x1b[10;2HB: Cancel");
+        printf("\x1b[13;2HSource: service.cfg");
+        printf("\x1b[14;2Hmii_source= gallery save");
+        return;
+    }
     if(room_open) {
         printf("\x1b[2J\x1b[1;3HSTREETPASS PLAZA ROOM");
         printf("\x1b[3;2HVisitors: %d  Page %u/%u",visitor_count,
@@ -240,7 +268,7 @@ static void draw(void) {
     printf("\x1b[10;2HPeer ACK: %u (unauthenticated)",radio.ack.confirmed);
     printf("\x1b[11;2HA: Export your profile");
     printf("\x1b[13;2HX: View Plaza visitors");
-    printf("\x1b[14;2HY: Reload Mii Maker DS");
+    printf("\x1b[14;2HY: Choose Plaza Mii");
     printf("\x1b[15;2HB: Exit to loader");
     printf("\x1b[16;2HL: Host    R: Join/Scan");
     printf("\x1b[17;2HSELECT: Radio off");
@@ -313,6 +341,26 @@ int main(void) {
         scanKeys();
         unsigned down = keysDown();
         if(room_open && (++room_anim_frame%12u)==0u) draw();
+        if(mii_picker_open) {
+            if(down & KEY_B) { mii_picker_open=0; draw(); continue; }
+            if(down & (KEY_LEFT|KEY_RIGHT)) {
+                mii_picker_slot=(mii_picker_slot+(down&KEY_LEFT?99u:1u))%100u;
+                preview_mii_slot();draw();continue;
+            }
+            if((down & KEY_A) && mii_picker_valid && mii_picker_preview.features[47]) {
+                linked_mii=mii_picker_preview;
+                if(spds_mii_cache_write(&linked_mii,save_dir)) {
+                    mii_loaded=1;
+                    spds_mii_radio_name(myself.name,&linked_mii);
+                    if(spds_storage_save_profile(save_dir,&myself)!=0) last_poll.io_errors++;
+                    if(!spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,(uint32_t)time(NULL))) last_poll.io_errors++;
+                    if(!spds_visitor_export(save_dir,&myself,&linked_mii)) last_poll.io_errors++;
+                    mii_picker_open=0;
+                } else last_poll.io_errors++;
+                draw();continue;
+            }
+            continue;
+        }
         spds_bark_tick(&bark,(keysHeld() & KEY_LID)!=0);
         if(spds_arrival_notice_tick(&recent_arrival)) draw();
         if (puzzle_open && (down & (KEY_B | KEY_X))) {
@@ -473,8 +521,9 @@ int main(void) {
             draw();
         } else if(radio_event==2) draw();
         if (!roster_open && !puzzle_open && (down & KEY_Y)) {
-            load_mii_from_sd();
-            draw();
+            mii_picker_slot=mii_loaded && linked_mii.from_gallery?linked_mii.slot:0u;
+            mii_picker_open=1;
+            preview_mii_slot();draw();
         }
         if (!roster_open && !puzzle_open && (down & KEY_A)) {
             if (storage_ok) {
