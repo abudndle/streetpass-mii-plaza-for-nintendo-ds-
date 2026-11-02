@@ -16,25 +16,25 @@ static unsigned total;
 
 static void draw(void) {
     consoleSelect(&top_screen);
-    iprintf("\x1b[2J\x1b[1;3HSTREETPASS MII PLAZA DS");
-    iprintf("\x1b[4;2HIndependent homebrew prototype");
-    iprintf("\x1b[6;2HVisitor: %-20s", myself.name);
-    iprintf("\x1b[8;2HEncounters saved: %u", total);
-    iprintf("\x1b[10;2HRadio exchange: NOT READY");
-    iprintf("\x1b[12;2H3DS link: requires companion");
-    iprintf("\x1b[14;2HBackground: menu process only");
+    printf("\x1b[2J\x1b[1;3HSTREETPASS MII PLAZA DS");
+    printf("\x1b[4;2HIndependent homebrew prototype");
+    printf("\x1b[6;2HVisitor: %-20s", myself.name);
+    printf("\x1b[8;2HEncounters saved: %u", total);
+    printf("\x1b[10;2HRadio exchange: NOT READY");
+    printf("\x1b[12;2H3DS link: requires companion");
+    printf("\x1b[14;2HBackground: menu process only");
     consoleSelect(&bottom_screen);
-    iprintf("\x1b[2J\x1b[1;2HSTREETPASS INBOX");
-    iprintf("\x1b[4;2HStorage: %s", storage_ok ? "Ready" : "UNAVAILABLE");
-    iprintf("\x1b[6;2HNew %u / duplicate %u",
+    printf("\x1b[2J\x1b[1;2HSTREETPASS INBOX");
+    printf("\x1b[4;2HStorage: %s", storage_ok ? "Ready" : "UNAVAILABLE");
+    printf("\x1b[6;2HNew %u / duplicate %u",
             last_poll.accepted, last_poll.duplicates);
-    iprintf("\x1b[8;2HInvalid: %u  I/O errors: %u",
+    printf("\x1b[8;2HInvalid: %u  I/O errors: %u",
             last_poll.invalid, last_poll.io_errors);
-    iprintf("\x1b[11;2HA: Export your profile");
-    iprintf("\x1b[13;2HX: Check SD inbox");
-    iprintf("\x1b[15;2HB: Exit to loader");
-    iprintf("\x1b[19;1HSD file exchange is a test");
-    iprintf("\x1b[20;1Htransport, NOT radio StreetPass.");
+    printf("\x1b[11;2HA: Export your profile");
+    printf("\x1b[13;2HX: Check SD inbox");
+    printf("\x1b[15;2HB: Exit to loader");
+    printf("\x1b[19;1HSD file exchange is a test");
+    printf("\x1b[20;1Htransport, NOT radio StreetPass.");
 }
 static void poll_now(void) {
     if (storage_ok) {
