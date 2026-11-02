@@ -35,3 +35,23 @@ jobs:
           PY
   # Build on self-hosted runners with BlocksDS preinstalled, or manually using 'make'.
   # Do NOT upload Nintendo game files, extracted assets or their converted derivatives.
+
+  rom-build:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: skylyrac/blocksds:slim-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build native DS/DSi homebrew ROM
+        run: make
+      - name: Validate output exists and is not empty
+        run: test -s streetpass-plaza-ds.nds
+      - name: Upload homebrew ROM only
+        uses: actions/upload-artifact@v4
+        with:
+          name: streetpass-plaza-ds-homebrew
+          path: streetpass-plaza-ds.nds
+          if-no-files-found: error
+          retention-days: 7
