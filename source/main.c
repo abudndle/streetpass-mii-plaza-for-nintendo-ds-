@@ -39,6 +39,8 @@ static SpdsMii mii_picker_preview;
 static int mii_picker_valid;
 static unsigned room_selected;
 static unsigned room_anim_frame;
+static unsigned relay_send_index;
+static unsigned relay_send_frames;
 static int auto_radio;
 static unsigned role_check_frames;
 static SpdsBarkMode bark;
@@ -340,7 +342,7 @@ int main(void) {
         else puzzle_ready=0; /* Never overwrite a corrupt existing save. */
         poll_now();
     }
-    spds_relay_init(&relay,myself.sender_id,0);
+    spds_relay_init(&relay,myself.sender_id,1);
     spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,(uint32_t)time(NULL));
     draw();
     unsigned frames = 0;
@@ -503,6 +505,19 @@ int main(void) {
             }
         }
         int radio_event=spds_wifi_tick(&radio, outgoing, incoming);
+        /* Forward one cached visitor at a time; bounded hops prevent loops.
+         * Do not forward our own profile or unvalidated frames. */
+        if(radio.phase==SPDS_PHASE_LINKED && ++relay_send_frames>=180u) {
+            uint8_t forwarded[SPDS_RELAY_SIZE];
+            relay_send_frames=0;
+            for(unsigned tries=0;tries<SPDS_RELAY_CACHE;tries++) {
+                unsigned index=relay_send_index++%SPDS_RELAY_CACHE;
+                if(spds_relay_forward(&relay,index,forwarded)) {
+                    spds_wifi_send_relay(&radio,forwarded);
+                    break;
+                }
+            }
+        }
         if (radio_event==1) {
             SpdsRecord guest, accepted_guest;
             unsigned hops;

@@ -26,6 +26,7 @@ typedef struct {
 int spds_wifi_start(SpdsWireless *radio, enum SpdsWirelessMode mode);
 void spds_wifi_stop(SpdsWireless *radio);
 /* Called once per frame: 1 valid-size data frame, 2 matched peer ACK, 0 other. */
+int spds_wifi_send_relay(SpdsWireless *radio,const uint8_t frame[SPDS_RELAY_SIZE]);
 int spds_wifi_queue_ack(SpdsWireless *radio,uint64_t sender,uint32_t nonce);
 int spds_wifi_tick(SpdsWireless *radio,
                    const uint8_t outgoing[SPDS_RELAY_SIZE],
