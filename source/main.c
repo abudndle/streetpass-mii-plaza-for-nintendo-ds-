@@ -13,6 +13,7 @@
 #include "discovery.h"
 #include "bark_mode.h"
 #include "relay.h"
+#include "puzzle_swap.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -33,6 +34,11 @@ static SpdsBarkMode bark;
 static int sleep_override;
 static uint8_t outgoing[SPDS_RELAY_SIZE], incoming[SPDS_RELAY_SIZE];
 static SpdsRelay relay;
+static SpdsPuzzle puzzle;
+static int puzzle_ready;
+static int puzzle_open;
+static int puzzle_detail;
+static unsigned puzzle_save_errors;
 static const char *radio_status(void) {
     if (radio.mode == SPDS_WIFI_OFF) return "Off";
     if (radio.phase == SPDS_PHASE_START) return "Starting";
@@ -74,6 +80,14 @@ static int load_mii_from_sd(void) {
     }
     return 1;
 }
+static void save_puzzle_progress(void) {
+    if(!storage_ok || !puzzle_ready) return;
+    SpdsPuzzle next=puzzle;
+    if(spds_puzzle_award_encounters(&next,total)) {
+        if(spds_puzzle_save(save_dir,&next)==0) puzzle=next;
+        else ++puzzle_save_errors;
+    }
+}
 static void draw(void) {
     consoleSelect(&top_screen);
     printf("\x1b[2J\x1b[1;3HSTREETPASS MII PLAZA DS");
@@ -88,6 +102,8 @@ static void draw(void) {
            sleep_override?"EXPERIMENTAL":"Off");
     printf("\x1b[13;2H3DS: no native CECD link");
     printf("\x1b[14;2HBackground: menu process only");
+    if(puzzle_ready) printf("\x1b[15;2HPuzzle pieces: %u/%u",
+                           spds_puzzle_completed(&puzzle),SPDS_PUZZLE_PIECES);
     printf("\x1b[16;2HRecent saved visitor Miis:");
     if(!visitor_count) printf("\x1b[18;2HNo full-Mii visitors yet");
     else for(int i=0;i<visitor_count && i<3;i++) {
@@ -95,6 +111,32 @@ static void draw(void) {
                visitors_on_screen[i].name);
     }
     consoleSelect(&bottom_screen);
+    if(puzzle_open) {
+        printf("\x1b[2J\x1b[1;2HPUZZLE SWAP - DS PREVIEW");
+        if(!puzzle_ready) {
+            printf("\x1b[5;2HSave data unavailable");
+            printf("\x1b[18;2HB/X: Back");
+            return;
+        }
+        printf("\x1b[3;2HCollected %u of %u pieces",
+               spds_puzzle_completed(&puzzle),SPDS_PUZZLE_PIECES);
+        for(unsigned i=0;i<SPDS_PUZZLE_PIECES;i++) {
+            unsigned row=i/SPDS_PUZZLE_COLS;
+            unsigned col=i%SPDS_PUZZLE_COLS;
+            printf("\x1b[%u;%uH%c%c",5u+row*3u,4u+col*5u,
+                   i==puzzle.selected?'>':' ',
+                   (puzzle.pieces & (UINT32_C(1)<<i))?'#':'.');
+        }
+        if(puzzle_detail) printf("\x1b[15;2HPiece %u: %s",
+          puzzle.selected+1u,
+          (puzzle.pieces&(UINT32_C(1)<<puzzle.selected))?"Collected":"Missing");
+        printf("\x1b[17;2H# owned / . missing");
+        printf("\x1b[19;2HD-Pad/Touch: Select piece");
+        printf("\x1b[20;2HA: Inspect  B/X: Back");
+        printf("\x1b[21;2HPrototype: local DS rewards");
+        printf("\x1b[22;2HNo original puzzle artwork");
+        return;
+    }
     printf("\x1b[2J\x1b[1;2HSTREETPASS INBOX");
     printf("\x1b[4;2HStorage: %s", storage_ok ? "Ready" : "UNAVAILABLE");
     printf("\x1b[6;2HNew %u / duplicate %u",
@@ -102,7 +144,7 @@ static void draw(void) {
     printf("\x1b[8;2HInvalid: %u  I/O errors: %u",
             last_poll.invalid, last_poll.io_errors);
     printf("\x1b[11;2HA: Export your profile");
-    printf("\x1b[13;2HX: Check SD inbox");
+    printf("\x1b[13;2HX: Puzzle Swap preview");
     printf("\x1b[14;2HY: Reload Mii Maker DS");
     printf("\x1b[15;2HB: Exit to loader");
     printf("\x1b[16;2HL: Host    R: Join/Scan");
@@ -111,7 +153,7 @@ static void draw(void) {
     printf("\x1b[19;1HSD file exchange is a test");
     printf("\x1b[20;1Htransport, NOT radio StreetPass.");
     printf("\x1b[21;1HPlaza Mii cache: %s",mii_loaded?"Ready":"Not linked");
-    printf("\x1b[22;1HSTART: Refresh status");
+    printf("\x1b[22;1HSTART: Refresh / errors %u",puzzle_save_errors);
 }
 static void poll_now(void) {
     if (storage_ok) {
@@ -127,7 +169,8 @@ static void poll_now(void) {
             last_poll.invalid+=imported.invalid;
             last_poll.io_errors+=imported.io_errors;
         } else last_poll.io_errors++;
-        spds_storage_total(save_dir, &total);
+        if(spds_storage_total(save_dir, &total)==0) save_puzzle_progress();
+        else ++last_poll.io_errors;
         visitor_count=spds_visitor_list(save_dir,visitors_on_screen,3);
     }
 }
@@ -161,6 +204,8 @@ int main(void) {
             spds_storage_save_profile(save_dir, &myself);
         }
         if (spds_service_create(save_dir)) load_mii_from_sd();
+        if(spds_puzzle_load(save_dir,&puzzle)>=0) puzzle_ready=1;
+        else puzzle_ready=0; /* Never overwrite a corrupt existing save. */
         poll_now();
     }
     spds_relay_init(&relay,myself.sender_id,0);
@@ -172,20 +217,51 @@ int main(void) {
         scanKeys();
         unsigned down = keysDown();
         spds_bark_tick(&bark,(keysHeld() & KEY_LID)!=0);
-        if (down & KEY_B) break;
-        if ((down & KEY_L) && storage_ok) {
+        if(down & KEY_X) {
+            puzzle_open=!puzzle_open;
+            puzzle_detail=0;
+            draw();
+        }
+        if(down & KEY_B) {
+            if(!puzzle_open) break;
+            puzzle_open=0;
+            draw();
+            continue;
+        }
+        if(puzzle_open && puzzle_ready) {
+            int changed=0;
+            if(down & KEY_LEFT) changed=spds_puzzle_move(&puzzle,-1,0) || changed;
+            if(down & KEY_RIGHT) changed=spds_puzzle_move(&puzzle,1,0) || changed;
+            if(down & KEY_UP) changed=spds_puzzle_move(&puzzle,0,-1) || changed;
+            if(down & KEY_DOWN) changed=spds_puzzle_move(&puzzle,0,1) || changed;
+            if(down & KEY_TOUCH) {
+                touchPosition touch;
+                touchRead(&touch);
+                if(touch.px>=24 && touch.px<224 &&
+                   touch.py>=32 && touch.py<104 &&
+                   ((touch.py-32)%24)<16) {
+                    unsigned col=(unsigned)(touch.px-24)/40u;
+                    unsigned row=(unsigned)(touch.py-32)/24u;
+                    changed=spds_puzzle_select(&puzzle,row*SPDS_PUZZLE_COLS+col) || changed;
+                }
+            }
+            if(changed) puzzle_detail=0;
+            if(down & KEY_A) {puzzle_detail=1;changed=1;}
+            if(changed) draw();
+        }
+        if (!puzzle_open && (down & KEY_L) && storage_ok) {
             auto_radio=0;
             spds_wifi_stop(&radio);
             spds_wifi_start(&radio, SPDS_WIFI_HOST);
             draw();
         }
-        if ((down & KEY_R) && storage_ok) {
+        if (!puzzle_open && (down & KEY_R) && storage_ok) {
             auto_radio=0;
             spds_wifi_stop(&radio);
             spds_wifi_start(&radio, SPDS_WIFI_CLIENT);
             draw();
         }
-        if (down & KEY_SELECT) {
+        if (!puzzle_open && (down & KEY_SELECT)) {
             auto_radio=0;
             spds_wifi_stop(&radio);
             draw();
@@ -213,17 +289,18 @@ int main(void) {
                 if (accepted > 0) {
                     ++total;
                     ++last_poll.accepted;
+                    save_puzzle_progress();
                 }
                 else if (accepted == 0) ++last_poll.duplicates;
                 else ++last_poll.io_errors;
             } else ++last_poll.invalid;
             draw();
         }
-        if (down & KEY_Y) {
+        if (!puzzle_open && (down & KEY_Y)) {
             load_mii_from_sd();
             draw();
         }
-        if (down & KEY_A) {
+        if (!puzzle_open && (down & KEY_A)) {
             if (storage_ok) {
                 myself.timestamp = (uint32_t)time(NULL);
                 spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,
@@ -236,7 +313,7 @@ int main(void) {
             }
             draw();
         }
-        if ((down & (KEY_X | KEY_START)) || ++frames >= 300) {
+        if ((down & KEY_START) || ++frames >= 300) {
             frames = 0;
             poll_now();
             draw();
