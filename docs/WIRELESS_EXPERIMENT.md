@@ -10,7 +10,7 @@ The opt-in DSWifi transport in `source/wireless.c` is **unverified on physical h
 4. Press **SELECT** to turn off local radio. **B** exits the application.
 5. Report physical console models, flashcart/launcher type, firmware, ROM commit, and results, including logs and repeated passes.
 
-Payload: the 80-byte SPDR envelope containing a 64-byte SPDS homebrew packet (see DS_RELAY.md and PROTOCOL.md); the host uses its own unique game ID and beacon, rather than impersonating retail Nintendo games. Only **one client** per host in this experiment. Transfers are unauthenticated: send only a nickname you consent to share. Do not exchange private Mii identity fields or full official avatar data yet.
+Payload: the 80-byte versioned SPDR envelope containing the 64-byte SPDS homebrew packet (see DS_RELAY.md and PROTOCOL.md); the host uses its own unique game ID and beacon, rather than impersonating retail Nintendo games. Only **one client** per host in this experiment. Transfers are unauthenticated: send only a nickname you consent to share. Do not exchange private Mii identity fields or full official avatar data yet.
 
 ## Limitations and next steps
 
