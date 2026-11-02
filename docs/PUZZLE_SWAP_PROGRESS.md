@@ -33,3 +33,7 @@ encounter credits, 15-piece cap, exact disk round-trip, corruption
 detection and no mutation of caller state when loading fails.
 BlocksDS remains the DS/DSi ROM build toolchain. No Nintendo ROM,
 extracted game data or CECD private files enter public source or CI.
+
+## Combined Plaza UI integration
+
+On the current combined DS build, press X from the inbox to open the visitor roster, then press Y (or tap the Puzzle Swap row) to enter the prototype. B or X returns from the puzzle to the roster. The original inbox Y action (reload Mii Maker DS) is preserved. ACK feedback, visitor browsing, and puzzle progression coexist, but native 3DS StreetPass compatibility and authentic art remain unverified.

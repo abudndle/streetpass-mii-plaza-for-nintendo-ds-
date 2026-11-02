@@ -109,7 +109,7 @@ static uint64_t parse_id(const char *filename) {
     }
     return id;
 }
-int spds_visitor_list(const char *base,SpdsMii *out,unsigned cap) {
+int spds_visitor_list_page(const char *base,unsigned offset,SpdsMii *out,unsigned cap) {
     if(!base || (cap && !out)) return -1;
     char dirpath[SPDS_PATH_MAX];
     if(!path(dirpath,base,"visitors")) return -1;
@@ -123,11 +123,14 @@ int spds_visitor_list(const char *base,SpdsMii *out,unsigned cap) {
         scanned++;
         SpdsMii candidate;
         if(!spds_visitor_read(base,id,&candidate)) continue;
-        if(count<cap) out[count]=candidate;
+        if(count>=offset && count-offset<cap) out[count-offset]=candidate;
         count++;
     }
     closedir(d);
     return (int)count;
+}
+int spds_visitor_list(const char *base,SpdsMii *out,unsigned cap) {
+    return spds_visitor_list_page(base,0,out,cap);
 }
 int spds_visitor_poll(const char *base,uint64_t own_id,uint32_t now,
                       SpdsVisitorStats *stats) {

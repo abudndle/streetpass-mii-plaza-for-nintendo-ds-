@@ -57,11 +57,43 @@ int main(void) {
     assert(spds_visitor_list(base,shown,3)==1);
     assert(!strcmp(shown[0].name,"Real DS Mii"));
     assert(spds_visitor_list(base,NULL,0)==1);
+    strcpy(shown[0].name,"Unmodified");
+    assert(spds_visitor_list_page(base,1,shown,1)==1);
+    assert(!strcmp(shown[0].name,"Unmodified"));
+    assert(spds_visitor_list_page(base,0,shown,1)==1);
+    assert(!strcmp(shown[0].name,"Real DS Mii"));
+    assert(spds_visitor_list_page(base,0,NULL,1)==-1);
     /* A duplicate pass does not destroy the visitor's avatar. */
     f=fopen(incoming,"wb");assert(f);
     assert(fwrite(wire,1,sizeof wire,f)==sizeof wire);assert(fclose(f)==0);
     assert(spds_visitor_poll(base,111,1700000001u,&stats)==0);
     assert(stats.duplicates==1 && stats.accepted==0);
+    /* Seven valid cached Miis exercise pages 1, 2 and the short final page.
+     * Records use duplicate synthetic avatars so FAT enumeration order does
+     * not affect the expected outcome. */
+    char original[300],duplicate[300];
+    snprintf(original,sizeof original,"%s/visitors/%016llx.mds",base,
+             (unsigned long long)345);
+    FILE *source=fopen(original,"rb");assert(source);
+    uint8_t cached[SPDS_MII_PACKET];
+    assert(fread(cached,1,sizeof cached,source)==sizeof cached);
+    assert(fclose(source)==0);
+    for(unsigned i=0;i<6;i++) {
+        snprintf(duplicate,sizeof duplicate,"%s/visitors/%016llx.mds",
+                 base,(unsigned long long)(400u+i));
+        FILE *dest=fopen(duplicate,"wb");assert(dest);
+        assert(fwrite(cached,1,sizeof cached,dest)==sizeof cached);
+        assert(fclose(dest)==0);
+    }
+    assert(spds_visitor_list_page(base,0,shown,3)==7);
+    assert(spds_visitor_list_page(base,3,shown,3)==7);
+    strcpy(shown[1].name,"Not overwritten");
+    assert(spds_visitor_list_page(base,6,shown,2)==7);
+    assert(!strcmp(shown[0].name,"Real DS Mii"));
+    assert(!strcmp(shown[1].name,"Not overwritten"));
+    strcpy(shown[0].name,"No changes");
+    assert(spds_visitor_list_page(base,7,shown,1)==7);
+    assert(!strcmp(shown[0].name,"No changes"));
     puts("PASS: full-Mii visitor bundles, validated import, ownership, sharing and duplicate avoidance");
     return 0;
 }

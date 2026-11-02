@@ -2,6 +2,7 @@
 #include <nds.h>
 #include <dswifi9.h>
 #include <string.h>
+#include "relay.h"
 
 /* Independent application identifier; not a Nintendo game or CECD title ID. */
 #define SPDS_WIFI_GAME_ID 0x53504453u
@@ -12,11 +13,14 @@
  * duplicate/out-of-order detection happens in the SD store.
  */
 static volatile unsigned rx_ready;
+static volatile unsigned rx_size;
 static uint8_t rx_buffer[SPDS_RELAY_SIZE];
 
 static void copy_in_irq(int base, int len) {
-    if (len != (int)SPDS_RELAY_SIZE || rx_ready) return;
-    Wifi_RxRawReadPacket((u32)base, SPDS_RELAY_SIZE, rx_buffer);
+    if ((len != (int)SPDS_RELAY_SIZE && len != (int)SPDS_ACK_SIZE) ||
+        rx_ready) return;
+    Wifi_RxRawReadPacket((u32)base, len, rx_buffer);
+    rx_size = (unsigned)len;
     rx_ready = 1;
 }
 static void from_host(Wifi_MPPacketType type, int base, int len) {
@@ -31,6 +35,7 @@ int spds_wifi_start(SpdsWireless *r, enum SpdsWirelessMode mode) {
         return -1;
     memset(r, 0, sizeof(*r));
     rx_ready = 0;
+    rx_size = 0;
     if (!Wifi_InitDefault(INIT_ONLY | WIFI_LOCAL_ONLY)) {
         r->phase = SPDS_PHASE_ERROR;
         r->last_error = -1;
@@ -64,6 +69,23 @@ void spds_wifi_stop(SpdsWireless *r) {
     r->mode = SPDS_WIFI_OFF;
     r->phase = SPDS_PHASE_OFF;
     rx_ready = 0;
+    rx_size = 0;
+}
+int spds_wifi_queue_ack(SpdsWireless *r,uint64_t sender,uint32_t nonce) {
+    if(!r || r->mode==SPDS_WIFI_OFF ||
+       !spds_ack_encode(r->ack_frame,sender,nonce)) return 0;
+    r->ack_pending=1;
+    return 1;
+}
+static int tx_frame(SpdsWireless *r,const uint8_t *frame,unsigned length) {
+    if(r->mode==SPDS_WIFI_HOST) {
+        if(!(Wifi_MultiplayerGetClientMask() & (1u<<1))) return 0;
+        return Wifi_MultiplayerHostToClientDataTxFrame(1,frame,length)>=0;
+    }
+    if(r->mode==SPDS_WIFI_CLIENT &&
+       Wifi_AssocStatus()==ASSOCSTATUS_ASSOCIATED)
+        return Wifi_MultiplayerClientToHostDataTxFrame(frame,length)>=0;
+    return 0;
 }
 int spds_wifi_tick(SpdsWireless *r,
                    const uint8_t outgoing[SPDS_RELAY_SIZE],
@@ -108,24 +130,40 @@ int spds_wifi_tick(SpdsWireless *r,
             r->phase = SPDS_PHASE_SCANNING;
         }
     }
-    if (r->phase == SPDS_PHASE_LINKED && (++r->frames % 180u) == 0u) {
-        if (r->mode == SPDS_WIFI_HOST) {
-            if (Wifi_MultiplayerGetClientMask() & (1u << 1)) {
-                if (Wifi_MultiplayerHostToClientDataTxFrame(
-                        1, outgoing, SPDS_RELAY_SIZE) >= 0) r->sent++;
-            }
-        } else if (Wifi_AssocStatus() == ASSOCSTATUS_ASSOCIATED) {
-            if (Wifi_MultiplayerClientToHostDataTxFrame(
-                    outgoing, SPDS_RELAY_SIZE) >= 0) r->sent++;
-        } else {
+    if (r->phase == SPDS_PHASE_LINKED) {
+        ++r->frames;
+        if (r->mode==SPDS_WIFI_CLIENT &&
+            Wifi_AssocStatus()!=ASSOCSTATUS_ASSOCIATED) {
             Wifi_ScanMode();
-            r->phase = SPDS_PHASE_SCANNING;
+            r->phase=SPDS_PHASE_SCANNING;
+        } else {
+            /* One queued ACK, rate-limited to at most 5 per second.
+             * IRQ callbacks never transmit or touch FAT storage. */
+            if (r->ack_pending && (r->frames % 12u)==0u &&
+                tx_frame(r,r->ack_frame,SPDS_ACK_SIZE)) {
+                r->ack_pending=0;
+                ++r->ack_sent;
+            }
+            if ((r->frames % 180u)==0u) {
+                SpdsRecord own;
+                unsigned hops;
+                uint32_t originated;
+                if(spds_relay_decode(&own,&hops,&originated,
+                                     outgoing,SPDS_RELAY_SIZE) &&
+                   tx_frame(r,outgoing,SPDS_RELAY_SIZE)) {
+                    ++r->sent;
+                    spds_ack_tracker_track(&r->ack,own.sender_id,own.nonce);
+                }
+            }
         }
     }
     if (rx_ready) {
-        memcpy(incoming, rx_buffer, SPDS_RELAY_SIZE);
-        rx_ready = 0;
-        r->received++;
+        unsigned n=rx_size;
+        memcpy(incoming,rx_buffer,n);
+        rx_ready=0;
+        if(n==SPDS_ACK_SIZE)
+            return spds_ack_tracker_consume(&r->ack,incoming,n) ? 2 : 0;
+        ++r->received;
         return 1;
     }
     return 0;
