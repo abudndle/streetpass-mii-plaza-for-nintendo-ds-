@@ -88,6 +88,7 @@ static void draw(void) {
            sleep_override?"EXPERIMENTAL":"Off");
     printf("\x1b[13;2H3DS: no native CECD link");
     printf("\x1b[14;2HBackground: menu process only");
+    printf("\x1b[15;2HPeer ACKs: %u (not secure)",radio.ack.confirmed);
     printf("\x1b[16;2HRecent saved visitor Miis:");
     if(!visitor_count) printf("\x1b[18;2HNo full-Mii visitors yet");
     else for(int i=0;i<visitor_count && i<3;i++) {
@@ -101,6 +102,7 @@ static void draw(void) {
             last_poll.accepted, last_poll.duplicates);
     printf("\x1b[8;2HInvalid: %u  I/O errors: %u",
             last_poll.invalid, last_poll.io_errors);
+    printf("\x1b[10;2HPeer ACK: %u (unauthenticated)",radio.ack.confirmed);
     printf("\x1b[11;2HA: Export your profile");
     printf("\x1b[13;2HX: Check SD inbox");
     printf("\x1b[14;2HY: Reload Mii Maker DS");
@@ -204,21 +206,32 @@ int main(void) {
                 draw();
             }
         }
-        if (spds_wifi_tick(&radio, outgoing, incoming)) {
-            SpdsRecord guest;
-            if (spds_relay_accept(&relay,incoming,SPDS_RELAY_SIZE,
-                 (uint32_t)time(NULL),&guest)>0) {
-                int accepted = spds_storage_receive(
-                    save_dir, &guest, myself.sender_id, (uint32_t)time(NULL));
-                if (accepted > 0) {
-                    ++total;
-                    ++last_poll.accepted;
+        int radio_event=spds_wifi_tick(&radio, outgoing, incoming);
+        if (radio_event==1) {
+            SpdsRecord guest, accepted_guest;
+            unsigned hops;
+            uint32_t originated;
+            if (spds_relay_decode(&guest,&hops,&originated,incoming,
+                                  SPDS_RELAY_SIZE)) {
+                if(guest.sender_id!=myself.sender_id) {
+                    int verdict=spds_relay_accept(&relay,incoming,
+                                  SPDS_RELAY_SIZE,(uint32_t)time(NULL),
+                                  &accepted_guest);
+                    if(verdict>=0) {
+                        /* A replay still needs ACK after the first ACK is
+                         * lost, but never ACK an unwritten encounter. */
+                        int stored=spds_storage_receive(save_dir,&guest,
+                                      myself.sender_id,(uint32_t)time(NULL));
+                        if(stored>=0)
+                            spds_wifi_queue_ack(&radio,guest.sender_id,guest.nonce);
+                        if(stored>0) {++total;++last_poll.accepted;}
+                        else if(stored==0) ++last_poll.duplicates;
+                        else ++last_poll.io_errors;
+                    } else ++last_poll.invalid;
                 }
-                else if (accepted == 0) ++last_poll.duplicates;
-                else ++last_poll.io_errors;
             } else ++last_poll.invalid;
             draw();
-        }
+        } else if(radio_event==2) draw();
         if (down & KEY_Y) {
             load_mii_from_sd();
             draw();
