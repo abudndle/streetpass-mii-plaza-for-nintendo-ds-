@@ -138,10 +138,10 @@ static void draw(void) {
             printf("\x1b[%d;2H%c %-.24s",5+i*3,
                    i==(int)room_selected?'>':' ',visitors_on_screen[i].name);
         if(!visitor_count) printf("\x1b[7;2HNo visitors available");
-        printf("\x1b[16;2HTap a visitor to select");
-        printf("\x1b[17;2HTap selected again for details");
+        printf("\x1b[16;2HD-Pad: Select visitor");
+        printf("\x1b[17;2HA: Open visitor details");
         printf("\x1b[19;2HLEFT/RIGHT: Room page");
-        printf("\x1b[20;2HUP/DOWN: Select  A: Details");
+        printf("\x1b[20;2HNo touch selection in room");
         printf("\x1b[21;2HB: Back to visitor roster");
         return;
     }
@@ -334,21 +334,6 @@ int main(void) {
             if(changed) puzzle_detail=0;
             if(down & KEY_A) {puzzle_detail=1;changed=1;}
             if(changed) draw();
-        }
-        if(room_open && (down & KEY_TOUCH)) {
-            touchPosition touch;
-            touchRead(&touch);
-            if(touch.py>=32 && touch.py<104) {
-                unsigned slot=(unsigned)(touch.py-32)/24u;
-                if(slot<(unsigned)visitor_count) {
-                    if(slot==room_selected) {
-                        roster.selected=spds_plaza_roster_page(&roster)*SPDS_PLAZA_PAGE_SIZE+slot;
-                        room_open=0;roster_open=1;
-                        spds_plaza_roster_show_detail(&roster);
-                    } else room_selected=slot;
-                    draw();continue;
-                }
-            }
         }
         if(room_open) {
             if(down & KEY_B) {room_open=0;roster_open=1;draw();continue;}
