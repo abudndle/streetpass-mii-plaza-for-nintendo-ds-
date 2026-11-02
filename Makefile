@@ -8,6 +8,7 @@ GAME_SUBTITLE := DS and DSi homebrew
 GAME_AUTHOR := Independent homebrew
 SOURCEDIRS := source
 LIBS := -ldswifi9 -lnds9
+LIBDIRS := $(BLOCKSDS)/libs/dswifi
 ARM7ELF := $(BLOCKSDS)/sys/arm7/main_core/arm7_dswifi_maxmod.elf
 CFLAGS += -std=gnu11 -Wall -Wextra -Werror
 
