@@ -3,7 +3,7 @@
 #include "protocol.h"
 #include <stdint.h>
 #define SPDS_RELAY_SIZE 80u
-#define SPDS_RELAY_MAX_HOPS 2u
+#define SPDS_RELAY_MAX_HOPS 4u
 #define SPDS_RELAY_CACHE 16u
 typedef struct {uint64_t sender;uint32_t nonce;uint32_t heard;uint8_t packet[SPDS_RELAY_SIZE];unsigned hops;} SpdsRelaySeen;
 typedef struct {SpdsRelaySeen seen[SPDS_RELAY_CACHE];unsigned next,received,duplicates,forwarded;uint64_t own_id;int enabled;} SpdsRelay;
