@@ -14,6 +14,7 @@
 #include "bark_mode.h"
 #include "relay.h"
 #include "plaza_roster.h"
+#include "arrival_notice.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -36,6 +37,7 @@ static SpdsBarkMode bark;
 static int sleep_override;
 static uint8_t outgoing[SPDS_RELAY_SIZE], incoming[SPDS_RELAY_SIZE];
 static SpdsRelay relay;
+static SpdsArrivalNotice recent_arrival;
 static const char *radio_status(void) {
     if (radio.mode == SPDS_WIFI_OFF) return "Off";
     if (radio.phase == SPDS_PHASE_START) return "Starting";
@@ -99,6 +101,8 @@ static void draw(void) {
     consoleSelect(&top_screen);
     printf("\x1b[2J\x1b[1;3HSTREETPASS MII PLAZA DS");
     printf("\x1b[4;2HIndependent homebrew prototype");
+    if(recent_arrival.frames_left)
+        printf("\x1b[5;2HNew DS visitor: %.20s",recent_arrival.name);
     printf("\x1b[6;2HVisitor: %-20s", myself.name);
     printf("\x1b[7;2HMaker Mii: %-20s",mii_loaded?linked_mii.name:"None linked");
     printf("\x1b[8;2HEncounters saved: %u", total);
@@ -109,6 +113,7 @@ static void draw(void) {
            sleep_override?"EXPERIMENTAL":"Off");
     printf("\x1b[13;2H3DS: no native CECD link");
     printf("\x1b[14;2HBackground: menu process only");
+    printf("\x1b[15;2HPeer ACKs: %u (not secure)",radio.ack.confirmed);
     printf("\x1b[16;2H%s",roster_open?"Plaza roster (page view):":"Recent saved visitor Miis:");
     if(!visitor_count) printf("\x1b[18;2HNo full-Mii visitors yet");
     else for(int i=0;i<visitor_count && i<3;i++) {
@@ -149,6 +154,7 @@ static void draw(void) {
             last_poll.accepted, last_poll.duplicates);
     printf("\x1b[8;2HInvalid: %u  I/O errors: %u",
             last_poll.invalid, last_poll.io_errors);
+    printf("\x1b[10;2HPeer ACK: %u (unauthenticated)",radio.ack.confirmed);
     printf("\x1b[11;2HA: Export your profile");
     printf("\x1b[13;2HX: View Plaza visitors");
     printf("\x1b[14;2HY: Reload Mii Maker DS");
@@ -221,6 +227,7 @@ int main(void) {
         scanKeys();
         unsigned down = keysDown();
         spds_bark_tick(&bark,(keysHeld() & KEY_LID)!=0);
+        if(spds_arrival_notice_tick(&recent_arrival)) draw();
         if (down & KEY_B) {
             if (!roster_open) break;
             if(roster.detail_open) spds_plaza_roster_hide_detail(&roster);
@@ -287,21 +294,37 @@ int main(void) {
                 draw();
             }
         }
-        if (spds_wifi_tick(&radio, outgoing, incoming)) {
-            SpdsRecord guest;
-            if (spds_relay_accept(&relay,incoming,SPDS_RELAY_SIZE,
-                 (uint32_t)time(NULL),&guest)>0) {
-                int accepted = spds_storage_receive(
-                    save_dir, &guest, myself.sender_id, (uint32_t)time(NULL));
-                if (accepted > 0) {
-                    ++total;
-                    ++last_poll.accepted;
+        int radio_event=spds_wifi_tick(&radio, outgoing, incoming);
+        if (radio_event==1) {
+            SpdsRecord guest, accepted_guest;
+            unsigned hops;
+            uint32_t originated;
+            if (spds_relay_decode(&guest,&hops,&originated,incoming,
+                                  SPDS_RELAY_SIZE)) {
+                if(guest.sender_id!=myself.sender_id) {
+                    int verdict=spds_relay_accept(&relay,incoming,
+                                  SPDS_RELAY_SIZE,(uint32_t)time(NULL),
+                                  &accepted_guest);
+                    if(verdict>=0) {
+                        /* A replay still needs ACK after the first ACK is
+                         * lost, but never ACK an unwritten encounter. */
+                        int stored=spds_storage_receive(save_dir,&guest,
+                                      myself.sender_id,(uint32_t)time(NULL));
+                        if(stored>=0)
+                            spds_wifi_queue_ack(&radio,guest.sender_id,guest.nonce);
+                        if(stored>0) {
+                            ++total;
+                            ++last_poll.accepted;
+                            spds_arrival_notice_show(&recent_arrival,guest.name,
+                                                    SPDS_ARRIVAL_DURATION_FRAMES);
+                        }
+                        else if(stored==0) ++last_poll.duplicates;
+                        else ++last_poll.io_errors;
+                    } else ++last_poll.invalid;
                 }
-                else if (accepted == 0) ++last_poll.duplicates;
-                else ++last_poll.io_errors;
             } else ++last_poll.invalid;
             draw();
-        }
+        } else if(radio_event==2) draw();
         if (!roster_open && (down & KEY_Y)) {
             load_mii_from_sd();
             draw();

@@ -38,5 +38,9 @@ test:
 	./build-host/test_relay
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/plaza_roster.c tests/test_plaza_roster.c -o build-host/test_plaza_roster
 	./build-host/test_plaza_roster
+	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/radio_ack.c source/protocol.c tests/test_radio_ack.c -o build-host/test_radio_ack
+	./build-host/test_radio_ack
+	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/arrival_notice.c tests/test_arrival_notice.c -o build-host/test_arrival_notice
+	./build-host/test_arrival_notice
 	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py tools/index_darc.py
 	python3 -m unittest discover -s tests -p 'test_*.py' -v
