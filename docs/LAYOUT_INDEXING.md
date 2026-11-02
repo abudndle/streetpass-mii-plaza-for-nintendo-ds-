@@ -22,3 +22,22 @@ Parsing or listing these members does **not** mean those animations or scenes
 have been compiled into the DS ROM. The next milestone is parsing the
 referenced layout pane/animation commands and bringing converted, permitted
 private assets into a reproducible local build, subject to DS VRAM limits.
+
+## Validated private NCCH layout inventory
+
+The six archives from the user-supplied base `CTR-N-HMEE` NCCH were
+indexed offline. Together they contain **412 original resource members**:
+
+| Archive | Original layout (.bclyt) | Animation (.bclan) | Image (.bclim) | Total |
+| --- | ---: | ---: | ---: | ---: |
+| 3dtest | 2 | 0 | 2 | 4 |
+| MEETCommon | 15 | 51 | 45 | 111 |
+| game | 19 | 31 | 25 | 75 |
+| main | 22 | 98 | 58 | 178 |
+| map | 3 | 10 | 13 | 26 |
+| stay | 4 | 8 | 6 | 18 |
+| **Total** | **65** | **198** | **149** | **412** |
+
+This is only an inventory, **not** evidence of renderer/animation support
+or gameplay parity. Original model and visual binary payloads are retained
+solely in the private local workspace and never shipped in public CI.
