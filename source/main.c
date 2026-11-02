@@ -34,6 +34,7 @@ static SpdsPlazaRoster roster;
 static int roster_open;
 static int room_open;
 static unsigned room_selected;
+static unsigned room_anim_frame;
 static int auto_radio;
 static unsigned role_check_frames;
 static SpdsBarkMode bark;
@@ -171,6 +172,8 @@ static void draw(void) {
         printf("\x1b[3;2HVisitors: %d  Selected: %u",visitor_count,visitor_count?room_selected+1u:0u);
         for(int i=0;i<visitor_count && i<3;i++) {
             unsigned x=2u+(unsigned)i*10u;
+            unsigned phase=(room_anim_frame/12u+(unsigned)i*3u)%6u;
+            x+=phase<3u?phase:5u-phase;
             printf("\x1b[6;%uH%s",x,i==(int)room_selected?"   v":"    ");
             printf("\x1b[7;%uH  O  ",x);
             printf("\x1b[8;%uH /|\\\\ ",x);
@@ -293,6 +296,7 @@ int main(void) {
         swiWaitForVBlank();
         scanKeys();
         unsigned down = keysDown();
+        if(room_open && (++room_anim_frame%12u)==0u) draw();
         spds_bark_tick(&bark,(keysHeld() & KEY_LID)!=0);
         if(spds_arrival_notice_tick(&recent_arrival)) draw();
         if (puzzle_open && (down & (KEY_B | KEY_X))) {
@@ -356,7 +360,7 @@ int main(void) {
             draw();
         }
         if(roster_open && (down & KEY_START)) {
-            room_selected=0;room_open=1;roster_open=0;draw();continue;
+            room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;draw();continue;
         }
         if(roster_open && (down & KEY_Y)) {
             puzzle_open=1;
