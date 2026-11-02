@@ -12,6 +12,7 @@
 #include "visitor.h"
 #include "discovery.h"
 #include "bark_mode.h"
+#include "relay.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -30,7 +31,8 @@ static int auto_radio;
 static unsigned role_check_frames;
 static SpdsBarkMode bark;
 static int sleep_override;
-static uint8_t outgoing[SPDS_WIRE_SIZE], incoming[SPDS_WIRE_SIZE];
+static uint8_t outgoing[SPDS_RELAY_SIZE], incoming[SPDS_RELAY_SIZE];
+static SpdsRelay relay;
 static const char *radio_status(void) {
     if (radio.mode == SPDS_WIFI_OFF) return "Off";
     if (radio.phase == SPDS_PHASE_START) return "Starting";
@@ -58,7 +60,7 @@ static int load_mii_from_sd(void) {
     if(linked_mii.features[47]) { /* Mii Maker DS 'sharing allowed' policy */
         spds_mii_radio_name(myself.name,&linked_mii);
         if(spds_storage_save_profile(save_dir,&myself)!=0) return -1;
-        if(spds_encode(&myself,outgoing)!=0) return -1;
+        if(!spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,(uint32_t)time(NULL))) return -1;
         if(!spds_visitor_export(save_dir,&myself,&linked_mii)) return -1;
     } else {
         /* Never share a Mii with their sharing bit disabled. Remove any
@@ -67,7 +69,7 @@ static int load_mii_from_sd(void) {
         int n=snprintf(old,sizeof old,"%s/outbox/visitor.spv",save_dir);
         if(n>=0 && n<(int)sizeof old) remove(old);
         strcpy(myself.name,"DS Traveler");
-        if(spds_encode(&myself,outgoing)!=0 ||
+        if(!spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,(uint32_t)time(NULL)) ||
            spds_storage_save_profile(save_dir,&myself)!=0) return -1;
     }
     return 1;
@@ -161,7 +163,8 @@ int main(void) {
         if (spds_service_create(save_dir)) load_mii_from_sd();
         poll_now();
     }
-    spds_encode(&myself, outgoing);
+    spds_relay_init(&relay,myself.sender_id,0);
+    spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,(uint32_t)time(NULL));
     draw();
     unsigned frames = 0;
     for (;;) {
@@ -203,7 +206,8 @@ int main(void) {
         }
         if (spds_wifi_tick(&radio, outgoing, incoming)) {
             SpdsRecord guest;
-            if (spds_decode(&guest, incoming, SPDS_WIRE_SIZE) == 0) {
+            if (spds_relay_accept(&relay,incoming,SPDS_RELAY_SIZE,
+                 (uint32_t)time(NULL),&guest)>0) {
                 int accepted = spds_storage_receive(
                     save_dir, &guest, myself.sender_id, (uint32_t)time(NULL));
                 if (accepted > 0) {
@@ -222,6 +226,8 @@ int main(void) {
         if (down & KEY_A) {
             if (storage_ok) {
                 myself.timestamp = (uint32_t)time(NULL);
+                spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,
+                                  (uint32_t)time(NULL));
                 if (spds_storage_save_profile(save_dir, &myself) != 0)
                     last_poll.io_errors++;
                 if (mii_loaded && linked_mii.features[47] &&

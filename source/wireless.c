@@ -12,11 +12,11 @@
  * duplicate/out-of-order detection happens in the SD store.
  */
 static volatile unsigned rx_ready;
-static uint8_t rx_buffer[SPDS_WIRE_SIZE];
+static uint8_t rx_buffer[SPDS_RELAY_SIZE];
 
 static void copy_in_irq(int base, int len) {
-    if (len != (int)SPDS_WIRE_SIZE || rx_ready) return;
-    Wifi_RxRawReadPacket((u32)base, SPDS_WIRE_SIZE, rx_buffer);
+    if (len != (int)SPDS_RELAY_SIZE || rx_ready) return;
+    Wifi_RxRawReadPacket((u32)base, SPDS_RELAY_SIZE, rx_buffer);
     rx_ready = 1;
 }
 static void from_host(Wifi_MPPacketType type, int base, int len) {
@@ -66,8 +66,8 @@ void spds_wifi_stop(SpdsWireless *r) {
     rx_ready = 0;
 }
 int spds_wifi_tick(SpdsWireless *r,
-                   const uint8_t outgoing[SPDS_WIRE_SIZE],
-                   uint8_t incoming[SPDS_WIRE_SIZE]) {
+                   const uint8_t outgoing[SPDS_RELAY_SIZE],
+                   uint8_t incoming[SPDS_RELAY_SIZE]) {
     if (!r || !outgoing || !incoming || r->mode == SPDS_WIFI_OFF) return 0;
     if (r->phase == SPDS_PHASE_START && Wifi_LibraryModeReady()) {
         if (r->mode == SPDS_WIFI_HOST) {
@@ -112,18 +112,18 @@ int spds_wifi_tick(SpdsWireless *r,
         if (r->mode == SPDS_WIFI_HOST) {
             if (Wifi_MultiplayerGetClientMask() & (1u << 1)) {
                 if (Wifi_MultiplayerHostToClientDataTxFrame(
-                        1, outgoing, SPDS_WIRE_SIZE) >= 0) r->sent++;
+                        1, outgoing, SPDS_RELAY_SIZE) >= 0) r->sent++;
             }
         } else if (Wifi_AssocStatus() == ASSOCSTATUS_ASSOCIATED) {
             if (Wifi_MultiplayerClientToHostDataTxFrame(
-                    outgoing, SPDS_WIRE_SIZE) >= 0) r->sent++;
+                    outgoing, SPDS_RELAY_SIZE) >= 0) r->sent++;
         } else {
             Wifi_ScanMode();
             r->phase = SPDS_PHASE_SCANNING;
         }
     }
     if (rx_ready) {
-        memcpy(incoming, rx_buffer, SPDS_WIRE_SIZE);
+        memcpy(incoming, rx_buffer, SPDS_RELAY_SIZE);
         rx_ready = 0;
         r->received++;
         return 1;
