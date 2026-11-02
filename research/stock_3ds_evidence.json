@@ -1,0 +1,18 @@
+{
+  "discovery_capture": {
+    "status": "unknown"
+  },
+  "radio_frame_control": {
+    "status": "blocked",
+    "evidence": "DSWiFi native 3DS management-frame capability not demonstrated"
+  },
+  "cecd_handshake": {
+    "status": "unknown"
+  },
+  "encrypted_exchange": {
+    "status": "unknown"
+  },
+  "native_plaza_visitor": {
+    "status": "unknown"
+  }
+}
