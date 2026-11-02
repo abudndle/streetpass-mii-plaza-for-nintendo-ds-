@@ -10,6 +10,7 @@
 typedef struct {
     int enabled;       /* permits polling when the host process is active */
     int radio_enabled; /* opt-in: no radio transmission just from SD presence */
+    int lid_search_enabled; /* optional Nintendogs-like closed lid test */
     char mii_source[SPDS_PATH_MAX]; /* explicitly selected source .sav/.mds */
 } SpdsServiceConfig;
 

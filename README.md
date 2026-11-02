@@ -29,6 +29,17 @@ No SD file can autonomously run in the background of unrelated DS ROMs.
 - [Private NCCH asset inventory and LZ decoder](docs/PRIVATE_ASSET_PIPELINE.md): all 115 RomFS file entries mapped and 56 compressed resources decoded from the user-provided base NCCH offline; *no copyrighted assets on GitHub*.
 - Automated CI: host tests every five minutes plus native ROM build and artifact on pushes/PRs/manual runs.
 
+## Closed-lid Bark Mode experiment
+
+The original Nintendogs DS manual confirms that Bark Mode can continue
+searching with the lid closed. BlocksDS exposes `disableSleep()`,
+allowing an **opt-in** experiment while this Plaza is running.
+Set both `radio_enabled=1` and `lid_search_enabled=1` in
+`streetpass-plaza/service.cfg`. **This is not yet validated on real
+hardware**, will consume more battery, does not run in unrelated games
+and does not enable official unmodified-3DS StreetPass. See
+[Bark Mode research](docs/BARK_MODE_RESEARCH.md).
+
 ## Optional automatic local wireless
 
 Set `radio_enabled=1` in `streetpass-plaza/service.cfg` to try

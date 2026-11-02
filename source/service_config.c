@@ -26,6 +26,8 @@ int spds_service_create(const char *base) {
       "# Your launcher/game must explicitly integrate the service.\n"
       "enabled=1\n"
       "radio_enabled=0\n"
+      "# Optional Bark Mode experiment: keeps app awake with lid closed.\n"
+      "lid_search_enabled=0\n"
       "# Set mii_source to your Mii Maker DS 8192/65536-byte .sav or 134-byte .mds.\n"
       "# Example on flashcard: mii_source=fat:/roms/mii-ds.sav\n"
       "# Example on DSi SD: mii_source=sd:/roms/mii-ds.sav\n"
@@ -69,6 +71,9 @@ int spds_service_read(const char *base,SpdsServiceConfig *cfg) {
         } else if(!strcmp(key,"radio_enabled")) {
             if(strcmp(value,"0") && strcmp(value,"1")) { good=0; break; }
             tmp.radio_enabled=*value=='1';
+        } else if(!strcmp(key,"lid_search_enabled")) {
+            if(strcmp(value,"0") && strcmp(value,"1")) { good=0; break; }
+            tmp.lid_search_enabled=*value=='1';
         } else if(!strcmp(key,"mii_source")) {
             if(strlen(value)>=sizeof tmp.mii_source) { good=0; break; }
             memcpy(tmp.mii_source,value,strlen(value)+1);

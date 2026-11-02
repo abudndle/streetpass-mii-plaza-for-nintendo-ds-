@@ -11,6 +11,7 @@
 #include "service_config.h"
 #include "visitor.h"
 #include "discovery.h"
+#include "bark_mode.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -27,6 +28,8 @@ static SpdsMii visitors_on_screen[3];
 static int visitor_count;
 static int auto_radio;
 static unsigned role_check_frames;
+static SpdsBarkMode bark;
+static int sleep_override;
 static uint8_t outgoing[SPDS_WIRE_SIZE], incoming[SPDS_WIRE_SIZE];
 static const char *radio_status(void) {
     if (radio.mode == SPDS_WIFI_OFF) return "Off";
@@ -45,6 +48,10 @@ static const char *radio_status(void) {
 static int load_mii_from_sd(void) {
     if (!storage_ok || !spds_service_read(save_dir,&service_cfg)) return 0;
     auto_radio=service_cfg.enabled && service_cfg.radio_enabled;
+    int lid_permission=auto_radio && service_cfg.lid_search_enabled;
+    if(lid_permission && !sleep_override) { disableSleep(); sleep_override=1; }
+    else if(!lid_permission && sleep_override) { enableSleep(); sleep_override=0; }
+    spds_bark_init(&bark,lid_permission);
     int imported=spds_service_load_mii(save_dir,&service_cfg,&linked_mii);
     if (imported<=0) return imported;
     mii_loaded=1;
@@ -75,7 +82,9 @@ static void draw(void) {
     printf("\x1b[9;2HFull-Mii visitors: %u",visitor_stats.accepted);
     printf("\x1b[10;2HLocal radio: %-14s", radio_status());
     printf("\x1b[11;2HAuto scan: %s",auto_radio?"Enabled":"Disabled");
-    printf("\x1b[12;2H3DS link: requires companion");
+    printf("\x1b[12;2HLid search: %-14s",
+           sleep_override?"EXPERIMENTAL":"Off");
+    printf("\x1b[13;2H3DS: no native CECD link");
     printf("\x1b[14;2HBackground: menu process only");
     printf("\x1b[16;2HRecent saved visitor Miis:");
     if(!visitor_count) printf("\x1b[18;2HNo full-Mii visitors yet");
@@ -159,6 +168,7 @@ int main(void) {
         swiWaitForVBlank();
         scanKeys();
         unsigned down = keysDown();
+        spds_bark_tick(&bark,(keysHeld() & KEY_LID)!=0);
         if (down & KEY_B) break;
         if ((down & KEY_L) && storage_ok) {
             auto_radio=0;
@@ -227,5 +237,6 @@ int main(void) {
         }
     }
     spds_wifi_stop(&radio);
+    if(sleep_override) enableSleep();
     return 0;
 }
