@@ -198,6 +198,24 @@ int spds_mii_from_image(SpdsMii *out,const uint8_t *p,size_t len) {
     }
     return 0;
 }
+int spds_mii_from_image_slot(SpdsMii *out,const uint8_t *p,size_t len,unsigned slot) {
+    if(!out || !p || slot>=SLOTS) return 0;
+    SpdsMii validated;
+    if(!spds_mii_from_image(&validated,p,len)) return 0;
+    if(len==COMPACT_BYTES)
+        return compact_slot(out,p+24+slot*COMPACT_RECORD,get32(p+4),slot);
+    if(len==LEGACY_BYTES) {
+        const uint8_t *bank=p;
+        uint32_t delta=get32(p+LEGACY_BANK+8)-get32(p+8);
+        if(delta && delta<UINT32_C(0x80000000)) bank=p+LEGACY_BANK;
+        const uint8_t *record=bank+24+slot*LEGACY_RECORD;
+        if(record[0]!=1 || !spds_mii_decode_packet(out,record+1,SPDS_MII_PACKET)) return 0;
+        out->from_gallery=1;
+        out->slot=slot;
+        return 1;
+    }
+    return 0;
+}
 int spds_mii_from_file(SpdsMii *out,const char *path) {
     if(!out || !path || !*path) return 0;
     FILE *f=fopen(path,"rb");

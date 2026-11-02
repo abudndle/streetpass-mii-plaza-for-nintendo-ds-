@@ -23,6 +23,8 @@ typedef struct {
 /* 1 on a decoded valid Mii, 0 for corrupted or unsupported data. */
 int spds_mii_decode_packet(SpdsMii *out, const uint8_t *bytes, size_t length);
 int spds_mii_from_image(SpdsMii *out, const uint8_t *bytes, size_t length);
+/* Select a specific gallery slot (0-99), validating the entire save first. */
+int spds_mii_from_image_slot(SpdsMii *out, const uint8_t *bytes, size_t length, unsigned slot);
 /* Read an explicit file supplied by the user, never search arbitrary saves. */
 int spds_mii_from_file(SpdsMii *out, const char *path);
 int spds_mii_cache_read(SpdsMii *out, const char *service_dir);
