@@ -72,10 +72,17 @@ static int load_mii_from_sd(void) {
     if(lid_permission && !sleep_override) { disableSleep(); sleep_override=1; }
     else if(!lid_permission && sleep_override) { enableSleep(); sleep_override=0; }
     spds_bark_init(&bark,lid_permission);
-    int imported=spds_service_load_mii(save_dir,&service_cfg,&linked_mii);
-    if (imported<=0) return imported;
+    /* Preserve the user's explicit Plaza selection across restarts. */
+    SpdsMii saved_choice;
+    if(spds_mii_cache_read(&saved_choice,save_dir) &&
+       saved_choice.from_gallery) {
+        linked_mii=saved_choice;
+    } else {
+        int imported=spds_service_load_mii(save_dir,&service_cfg,&linked_mii);
+        if(imported<=0) return imported;
+    }
     mii_loaded=1;
-    if(linked_mii.features[47]) { /* Mii Maker DS 'sharing allowed' policy */
+    if(linked_mii.features[47]) { /* Export appearance only when sharing allowed. */
         spds_mii_radio_name(myself.name,&linked_mii);
         if(spds_storage_save_profile(save_dir,&myself)!=0) return -1;
         if(!spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,(uint32_t)time(NULL))) return -1;
@@ -86,7 +93,8 @@ static int load_mii_from_sd(void) {
         char old[SPDS_PATH_MAX];
         int n=snprintf(old,sizeof old,"%s/outbox/visitor.spv",save_dir);
         if(n>=0 && n<(int)sizeof old) remove(old);
-        strcpy(myself.name,"DS Traveler");
+        /* Keep the locally selected Plaza identity even if copying is disabled. */
+        spds_mii_radio_name(myself.name,&linked_mii);
         if(!spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,(uint32_t)time(NULL)) ||
            spds_storage_save_profile(save_dir,&myself)!=0) return -1;
     }
@@ -138,7 +146,7 @@ static void draw(void) {
         consoleSelect(&bottom_screen);
         printf("\x1b[2J\x1b[2;2HCHOOSE YOUR PLAZA MII");
         printf("\x1b[6;2HLEFT/RIGHT: Change slot");
-        printf("\x1b[8;2HA: Confirm shareable Mii");
+        printf("\x1b[8;2HA: Choose this Mii");
         printf("\x1b[10;2HB: Cancel");
         printf("\x1b[13;2HSource: service.cfg");
         printf("\x1b[14;2Hmii_source= gallery save");
@@ -347,14 +355,20 @@ int main(void) {
                 mii_picker_slot=(mii_picker_slot+(down&KEY_LEFT?99u:1u))%100u;
                 preview_mii_slot();draw();continue;
             }
-            if((down & KEY_A) && mii_picker_valid && mii_picker_preview.features[47]) {
+            if((down & KEY_A) && mii_picker_valid) {
                 linked_mii=mii_picker_preview;
                 if(spds_mii_cache_write(&linked_mii,save_dir)) {
                     mii_loaded=1;
                     spds_mii_radio_name(myself.name,&linked_mii);
                     if(spds_storage_save_profile(save_dir,&myself)!=0) last_poll.io_errors++;
                     if(!spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,(uint32_t)time(NULL))) last_poll.io_errors++;
-                    if(!spds_visitor_export(save_dir,&myself,&linked_mii)) last_poll.io_errors++;
+                    if(linked_mii.features[47]) {
+                        if(!spds_visitor_export(save_dir,&myself,&linked_mii)) last_poll.io_errors++;
+                    } else {
+                        char old[SPDS_PATH_MAX];
+                        int n=snprintf(old,sizeof old,"%s/outbox/visitor.spv",save_dir);
+                        if(n>=0 && n<(int)sizeof old) remove(old);
+                    }
                     mii_picker_open=0;
                 } else last_poll.io_errors++;
                 draw();continue;
