@@ -4,6 +4,13 @@ An actively developed, independent homebrew adaptation targeting the original Ni
 
 ## Mii Maker DS integration and portable folder
 
+The Plaza also supports a versioned **full-Mii SD visitor bundle**. With
+a shareable linked Mii, `outbox/visitor.spv` carries the 134-byte Mii Maker
+avatar plus encounter metadata. Copy it into another Plaza's `inbox/` to
+import a cached visitor, removing foreign Personal ownership. This is
+currently **SD file exchange, not radio or native 3DS StreetPass**.
+See [visitor bundles](docs/VISITOR_BUNDLE.md).
+
 The Plaza now contains a read-only parser for Mii Maker DS 8-KiB/64-KiB
 ROM-associated save snapshots and standalone 134-byte avatar packets,
 plus a durable SD Mii cache. Configure the save's location in

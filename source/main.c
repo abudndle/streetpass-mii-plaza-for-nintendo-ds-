@@ -9,6 +9,7 @@
 #include "wireless.h"
 #include "mii_bridge.h"
 #include "service_config.h"
+#include "visitor.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -20,6 +21,7 @@ static SpdsWireless radio;
 static SpdsServiceConfig service_cfg;
 static SpdsMii linked_mii;
 static int mii_loaded;
+static SpdsVisitorStats visitor_stats;
 static uint8_t outgoing[SPDS_WIRE_SIZE], incoming[SPDS_WIRE_SIZE];
 static const char *radio_status(void) {
     if (radio.mode == SPDS_WIFI_OFF) return "Off";
@@ -44,6 +46,16 @@ static int load_mii_from_sd(void) {
         spds_mii_radio_name(myself.name,&linked_mii);
         if(spds_storage_save_profile(save_dir,&myself)!=0) return -1;
         if(spds_encode(&myself,outgoing)!=0) return -1;
+        if(!spds_visitor_export(save_dir,&myself,&linked_mii)) return -1;
+    } else {
+        /* Never share a Mii with their sharing bit disabled. Remove any
+         * stale full-appearance export after the user edits this policy. */
+        char old[SPDS_PATH_MAX];
+        int n=snprintf(old,sizeof old,"%s/outbox/visitor.spv",save_dir);
+        if(n>=0 && n<(int)sizeof old) remove(old);
+        strcpy(myself.name,"DS Traveler");
+        if(spds_encode(&myself,outgoing)!=0 ||
+           spds_storage_save_profile(save_dir,&myself)!=0) return -1;
     }
     return 1;
 }
@@ -54,6 +66,7 @@ static void draw(void) {
     printf("\x1b[6;2HVisitor: %-20s", myself.name);
     printf("\x1b[7;2HMaker Mii: %-20s",mii_loaded?linked_mii.name:"None linked");
     printf("\x1b[8;2HEncounters saved: %u", total);
+    printf("\x1b[9;2HFull-Mii visitors: %u",visitor_stats.accepted);
     printf("\x1b[10;2HLocal radio: %-14s", radio_status());
     printf("\x1b[12;2H3DS link: requires companion");
     printf("\x1b[14;2HBackground: menu process only");
@@ -81,6 +94,15 @@ static void poll_now(void) {
         if (spds_storage_poll(save_dir, myself.sender_id,
                               (uint32_t)time(NULL), &last_poll) != 0)
             last_poll.io_errors++;
+        SpdsVisitorStats imported;
+        if (spds_visitor_poll(save_dir,myself.sender_id,
+                              (uint32_t)time(NULL),&imported) == 0) {
+            visitor_stats=imported;
+            last_poll.accepted+=imported.accepted;
+            last_poll.duplicates+=imported.duplicates;
+            last_poll.invalid+=imported.invalid;
+            last_poll.io_errors+=imported.io_errors;
+        } else last_poll.io_errors++;
         spds_storage_total(save_dir, &total);
     }
 }
@@ -160,6 +182,9 @@ int main(void) {
             if (storage_ok) {
                 myself.timestamp = (uint32_t)time(NULL);
                 if (spds_storage_save_profile(save_dir, &myself) != 0)
+                    last_poll.io_errors++;
+                if (mii_loaded && linked_mii.features[47] &&
+                    !spds_visitor_export(save_dir,&myself,&linked_mii))
                     last_poll.io_errors++;
             }
             draw();
