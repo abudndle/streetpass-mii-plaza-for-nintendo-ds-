@@ -29,4 +29,8 @@ int spds_visitor_read(const char *base,uint64_t sender_id,SpdsMii *out);
  * Returns stored record count (possibly more than capacity), -1 on error.
  * Entry order follows FAT directory order, not chronological visits. */
 int spds_visitor_list(const char *base,SpdsMii *out,unsigned capacity);
+/* Page through the same validated Mii records; returns TOTAL record count.
+ * Only requested page entries are written. No allocations or original save writes. */
+int spds_visitor_list_page(const char *base,unsigned offset,
+                           SpdsMii *out,unsigned capacity);
 #endif

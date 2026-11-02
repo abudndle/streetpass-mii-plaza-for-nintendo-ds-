@@ -13,6 +13,7 @@
 #include "discovery.h"
 #include "bark_mode.h"
 #include "relay.h"
+#include "plaza_roster.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -27,6 +28,8 @@ static int mii_loaded;
 static SpdsVisitorStats visitor_stats;
 static SpdsMii visitors_on_screen[3];
 static int visitor_count;
+static SpdsPlazaRoster roster;
+static int roster_open;
 static int auto_radio;
 static unsigned role_check_frames;
 static SpdsBarkMode bark;
@@ -74,6 +77,24 @@ static int load_mii_from_sd(void) {
     }
     return 1;
 }
+static void refresh_roster(void) {
+    if (!storage_ok) {
+        visitor_count=0;
+        spds_plaza_roster_set_count(&roster,0);
+        return;
+    }
+    int total_visitors=spds_visitor_list(save_dir,NULL,0);
+    if (total_visitors<0) total_visitors=0;
+    spds_plaza_roster_set_count(&roster,(unsigned)total_visitors);
+    int page_total=spds_visitor_list_page(save_dir,
+         spds_plaza_roster_page(&roster)*SPDS_PLAZA_PAGE_SIZE,
+         visitors_on_screen,SPDS_PLAZA_PAGE_SIZE);
+    unsigned page_start=spds_plaza_roster_page(&roster)*SPDS_PLAZA_PAGE_SIZE;
+    visitor_count=page_total>0 && (unsigned)page_total>page_start ?
+                  (int)((unsigned)page_total-page_start) : 0;
+    if(visitor_count>(int)SPDS_PLAZA_PAGE_SIZE)
+        visitor_count=(int)SPDS_PLAZA_PAGE_SIZE;
+}
 static void draw(void) {
     consoleSelect(&top_screen);
     printf("\x1b[2J\x1b[1;3HSTREETPASS MII PLAZA DS");
@@ -81,20 +102,47 @@ static void draw(void) {
     printf("\x1b[6;2HVisitor: %-20s", myself.name);
     printf("\x1b[7;2HMaker Mii: %-20s",mii_loaded?linked_mii.name:"None linked");
     printf("\x1b[8;2HEncounters saved: %u", total);
-    printf("\x1b[9;2HFull-Mii visitors: %u",visitor_stats.accepted);
+    printf("\x1b[9;2HCached Mii visitors: %u",roster.count);
     printf("\x1b[10;2HLocal radio: %-14s", radio_status());
     printf("\x1b[11;2HAuto scan: %s",auto_radio?"Enabled":"Disabled");
     printf("\x1b[12;2HLid search: %-14s",
            sleep_override?"EXPERIMENTAL":"Off");
     printf("\x1b[13;2H3DS: no native CECD link");
     printf("\x1b[14;2HBackground: menu process only");
-    printf("\x1b[16;2HRecent saved visitor Miis:");
+    printf("\x1b[16;2H%s",roster_open?"Plaza roster (page view):":"Recent saved visitor Miis:");
     if(!visitor_count) printf("\x1b[18;2HNo full-Mii visitors yet");
     else for(int i=0;i<visitor_count && i<3;i++) {
-        printf("\x1b[%d;2H%-20.20s",18+i,
+        printf("\x1b[%d;2H%c %-20.20s",18+i,
+               roster_open && (unsigned)i==roster.selected%SPDS_PLAZA_PAGE_SIZE ? '>' : ' ',
                visitors_on_screen[i].name);
     }
     consoleSelect(&bottom_screen);
+    if(roster_open) {
+        printf("\x1b[2J\x1b[1;2HPLAZA VISITORS");
+        printf("\x1b[3;2HStored %u   Page %u/%u",roster.count,
+               roster.count?spds_plaza_roster_page(&roster)+1u:0u,
+               spds_plaza_roster_pages(&roster));
+        for(int i=0;i<visitor_count && i<3;i++) {
+            printf("\x1b[%d;2H%c %-24.24s",5+2*i,
+                   (unsigned)i==roster.selected%SPDS_PLAZA_PAGE_SIZE ? '>' : ' ',
+                   visitors_on_screen[i].name);
+        }
+        if(!visitor_count) printf("\x1b[7;2HNo visitors saved yet");
+        if(roster.detail_open && visitor_count) {
+            unsigned slot=roster.selected%SPDS_PLAZA_PAGE_SIZE;
+            if(slot<(unsigned)visitor_count) {
+                printf("\x1b[12;2HSELECTED VISITOR");
+                printf("\x1b[13;2HName: %-24.24s",visitors_on_screen[slot].name);
+                printf("\x1b[14;2HMade by: %-22.22s",visitors_on_screen[slot].creator);
+            }
+        }
+        printf("\x1b[17;2H< LEFT       RIGHT >");
+        printf("\x1b[19;2HUP/DOWN: Select visitor");
+        printf("\x1b[20;2HA: Info  Touch: Select");
+        printf("\x1b[21;2HB: Back  X: Close");
+        printf("\x1b[22;2HSTART: Refresh");
+        return;
+    }
     printf("\x1b[2J\x1b[1;2HSTREETPASS INBOX");
     printf("\x1b[4;2HStorage: %s", storage_ok ? "Ready" : "UNAVAILABLE");
     printf("\x1b[6;2HNew %u / duplicate %u",
@@ -102,7 +150,7 @@ static void draw(void) {
     printf("\x1b[8;2HInvalid: %u  I/O errors: %u",
             last_poll.invalid, last_poll.io_errors);
     printf("\x1b[11;2HA: Export your profile");
-    printf("\x1b[13;2HX: Check SD inbox");
+    printf("\x1b[13;2HX: View Plaza visitors");
     printf("\x1b[14;2HY: Reload Mii Maker DS");
     printf("\x1b[15;2HB: Exit to loader");
     printf("\x1b[16;2HL: Host    R: Join/Scan");
@@ -128,7 +176,7 @@ static void poll_now(void) {
             last_poll.io_errors+=imported.io_errors;
         } else last_poll.io_errors++;
         spds_storage_total(save_dir, &total);
-        visitor_count=spds_visitor_list(save_dir,visitors_on_screen,3);
+        refresh_roster();
     }
 }
 int main(void) {
@@ -140,6 +188,7 @@ int main(void) {
                 31, 0, true, true);
     consoleInit(&bottom_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
                 31, 0, false, true);
+    spds_plaza_roster_init(&roster);
     memset(&myself, 0, sizeof(myself));
     strcpy(myself.name, "DS Traveler");
     const char *drive = NULL;
@@ -172,7 +221,41 @@ int main(void) {
         scanKeys();
         unsigned down = keysDown();
         spds_bark_tick(&bark,(keysHeld() & KEY_LID)!=0);
-        if (down & KEY_B) break;
+        if (down & KEY_B) {
+            if (!roster_open) break;
+            if(roster.detail_open) spds_plaza_roster_hide_detail(&roster);
+            else roster_open=0;
+            draw();
+            continue;
+        }
+        if(down & KEY_X) {
+            roster_open=!roster_open;
+            spds_plaza_roster_hide_detail(&roster);
+            refresh_roster();
+            draw();
+        }
+        if(roster_open) {
+            int changed=0;
+            if(down & KEY_LEFT) changed=spds_plaza_roster_change_page(&roster,-1);
+            if(down & KEY_RIGHT) changed=spds_plaza_roster_change_page(&roster,1);
+            if(down & KEY_UP) changed=spds_plaza_roster_step(&roster,-1) || changed;
+            if(down & KEY_DOWN) changed=spds_plaza_roster_step(&roster,1) || changed;
+            if(down & KEY_A) changed=spds_plaza_roster_show_detail(&roster) || changed;
+            if(down & KEY_TOUCH) {
+                touchPosition touch;
+                touchRead(&touch);
+                if(touch.py>=40 && touch.py<88)
+                    changed=spds_plaza_roster_select_slot(&roster,
+                                      (unsigned)(touch.py-40)/16u) || changed;
+                else if(touch.py>=112 && touch.py<144)
+                    changed=spds_plaza_roster_change_page(&roster,
+                                      touch.px<128?-1:1) || changed;
+            }
+            if(changed) {
+                refresh_roster();
+                draw();
+            }
+        }
         if ((down & KEY_L) && storage_ok) {
             auto_radio=0;
             spds_wifi_stop(&radio);
@@ -219,11 +302,11 @@ int main(void) {
             } else ++last_poll.invalid;
             draw();
         }
-        if (down & KEY_Y) {
+        if (!roster_open && (down & KEY_Y)) {
             load_mii_from_sd();
             draw();
         }
-        if (down & KEY_A) {
+        if (!roster_open && (down & KEY_A)) {
             if (storage_ok) {
                 myself.timestamp = (uint32_t)time(NULL);
                 spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,
@@ -236,7 +319,7 @@ int main(void) {
             }
             draw();
         }
-        if ((down & (KEY_X | KEY_START)) || ++frames >= 300) {
+        if ((down & KEY_START) || ++frames >= 300) {
             frames = 0;
             poll_now();
             draw();
