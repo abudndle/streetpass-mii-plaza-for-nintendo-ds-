@@ -25,4 +25,8 @@ int spds_visitor_poll(const char *base,uint64_t own_id,
                       uint32_t now,SpdsVisitorStats *stats);
 /* Read cached appearance for a specific sender ID, never alter source data. */
 int spds_visitor_read(const char *base,uint64_t sender_id,SpdsMii *out);
+/* Enumerate stored, valid received Mii records without searching other apps.
+ * Returns stored record count (possibly more than capacity), -1 on error.
+ * Entry order follows FAT directory order, not chronological visits. */
+int spds_visitor_list(const char *base,SpdsMii *out,unsigned capacity);
 #endif

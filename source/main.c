@@ -22,6 +22,8 @@ static SpdsServiceConfig service_cfg;
 static SpdsMii linked_mii;
 static int mii_loaded;
 static SpdsVisitorStats visitor_stats;
+static SpdsMii visitors_on_screen[3];
+static int visitor_count;
 static uint8_t outgoing[SPDS_WIRE_SIZE], incoming[SPDS_WIRE_SIZE];
 static const char *radio_status(void) {
     if (radio.mode == SPDS_WIFI_OFF) return "Off";
@@ -70,6 +72,12 @@ static void draw(void) {
     printf("\x1b[10;2HLocal radio: %-14s", radio_status());
     printf("\x1b[12;2H3DS link: requires companion");
     printf("\x1b[14;2HBackground: menu process only");
+    printf("\x1b[16;2HRecent saved visitor Miis:");
+    if(!visitor_count) printf("\x1b[18;2HNo full-Mii visitors yet");
+    else for(int i=0;i<visitor_count && i<3;i++) {
+        printf("\x1b[%d;2H%-20.20s",18+i,
+               visitors_on_screen[i].name);
+    }
     consoleSelect(&bottom_screen);
     printf("\x1b[2J\x1b[1;2HSTREETPASS INBOX");
     printf("\x1b[4;2HStorage: %s", storage_ok ? "Ready" : "UNAVAILABLE");
@@ -104,6 +112,7 @@ static void poll_now(void) {
             last_poll.io_errors+=imported.io_errors;
         } else last_poll.io_errors++;
         spds_storage_total(save_dir, &total);
+        visitor_count=spds_visitor_list(save_dir,visitors_on_screen,3);
     }
 }
 int main(void) {
