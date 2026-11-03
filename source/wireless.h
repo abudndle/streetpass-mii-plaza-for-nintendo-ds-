@@ -5,10 +5,10 @@
 #include <stdint.h>
 
 /* Experimental DSWifi host-and-hub transport for up to 15 DS/DSi clients. Not native 3DS CECD. */
-enum SpdsWirelessMode { SPDS_WIFI_OFF, SPDS_WIFI_HOST, SPDS_WIFI_CLIENT };
+enum SpdsWirelessMode { SPDS_WIFI_OFF, SPDS_WIFI_HOST, SPDS_WIFI_CLIENT, SPDS_WIFI_MONITOR };
 enum SpdsWirelessPhase { SPDS_PHASE_OFF, SPDS_PHASE_START,
                          SPDS_PHASE_SCANNING, SPDS_PHASE_CONNECTING,
-                         SPDS_PHASE_LINKED, SPDS_PHASE_ERROR };
+                         SPDS_PHASE_LINKED, SPDS_PHASE_MONITOR, SPDS_PHASE_ERROR };
 typedef struct {
     enum SpdsWirelessMode mode;
     enum SpdsWirelessPhase phase;
@@ -17,11 +17,13 @@ typedef struct {
     unsigned sent;
     int last_error;
     SpdsAckTracker ack;
+    unsigned probe_hits; /* Anonymous probe matches; no MAC or console IDs stored. */
     unsigned ack_sent;
     int ack_pending;
     uint8_t ack_frame[SPDS_ACK_SIZE];
 } SpdsWireless;
 
+/* Monitor mode only recognizes public SSID/vendor tags and never exchanges CECD. */
 /* Explicit user opt-in to radio. Call from main UI or launcher event loop. */
 int spds_wifi_start(SpdsWireless *radio, enum SpdsWirelessMode mode);
 void spds_wifi_stop(SpdsWireless *radio);
