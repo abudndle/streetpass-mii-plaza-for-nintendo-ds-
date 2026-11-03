@@ -1,4 +1,5 @@
 #include "dsi_camera.h"
+#include "storage.h"
 
 #include <nds.h>
 #include <fat.h>
