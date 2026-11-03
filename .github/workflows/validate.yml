@@ -52,8 +52,14 @@ jobs:
         run: |
           set -eu
           wf-pacman -Sy --noconfirm blocksds-nitroengine
-          test -s /opt/blocksds/external/nitro-engine/lib/libNE.a
-          test -s /opt/blocksds/external/nitro-engine/include/NEMain.h
+          wf-pacman -Ql blocksds-nitroengine
+          ne_header=$(find /opt/blocksds -type f -name NEMain.h -print -quit)
+          ne_root=$(dirname "$(dirname "$ne_header")")
+          test -n "$ne_header"
+          test -s "$ne_root/lib/libNE.a"
+          echo "BLOCKSDSEXT=$(dirname "$ne_root")" >> "$GITHUB_ENV"
+          echo "Nitro Engine header: $ne_header"
+          echo "Nitro Engine root: $ne_root"
       - name: Build native DS/DSi homebrew ROM
         run: make
       - name: Validate output exists and is not empty
