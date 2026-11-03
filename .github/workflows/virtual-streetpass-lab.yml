@@ -1,5 +1,8 @@
 name: Virtual StreetPass emulator lab
 on:
+  workflow_run:
+    workflows: ["Validate DS Plaza"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       capture_only:
@@ -15,6 +18,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   emulator-install-and-capture:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
