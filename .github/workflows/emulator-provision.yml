@@ -1,0 +1,55 @@
+name: Emulator provisioning diagnostic
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/emulator-provision.yml'
+      - 'tools/emulator_preflight.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/emulator-provision.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emulator-provision-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  emulator-provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Linux package index
+        run: sudo apt-get update
+      - name: Attempt distro melonDS installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if apt-cache show melonds >/dev/null 2>&1; then
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y melonds
+          else
+            echo 'melonDS not offered by this Ubuntu runner package index'
+          fi
+      - name: Report emulator availability without claiming StreetPass
+        run: |
+          python3 tools/emulator_preflight.py --json | tee emulator-preflight.json
+          python3 - <<'PY'
+          import json
+          with open('emulator-preflight.json', encoding='utf-8') as f:
+              result = json.load(f)
+          expected = {'melonDS_to_melonDS', 'AzaharPlus_to_AzaharPlus_CECD', 'AzaharPlus_to_melonDS'}
+          assert set(result['tests']) == expected
+          assert all(value == 'NOT_RUN' for value in result['tests'].values())
+          print('Emulator executable availability checked. No StreetPass exchange attempted.')
+          PY
+      - name: Upload sanitized diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-provision-preflight
+          path: emulator-preflight.json
+          if-no-files-found: error
+          retention-days: 7
