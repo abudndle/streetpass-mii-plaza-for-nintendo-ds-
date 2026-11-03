@@ -7,6 +7,8 @@ on:
       - 'tools/emulator_preflight.py'
       - 'tools/configure_melonds_dldi.py'
       - 'source/main.c'
+      - 'source/plaza_3d.c'
+      - 'source/plaza_3d.h'
       - 'Makefile'
       - 'tests/test_storage_restart.c'
   push:
@@ -34,6 +36,12 @@ jobs:
       image: skylyrac/blocksds:slim-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Nitro Engine and DSMA BlocksDS package
+        run: |
+          set -euo pipefail
+          wf-pacman -Sy --noconfirm blocksds-nitroengine
+          test -s /opt/blocksds/external/nitro-engine/lib/libNE.a
+          test -s /opt/blocksds/external/nitro-engine/include/NEMain.h
       - name: Build public-source homebrew DS ROM
         run: make
       - name: Verify homebrew ROM exists in BlocksDS container
