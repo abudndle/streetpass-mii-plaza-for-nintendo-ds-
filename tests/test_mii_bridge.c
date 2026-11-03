@@ -69,6 +69,12 @@ int main(void) {
     put32(compact+7524,spds_crc32(compact,7524));
     assert(spds_mii_from_image(&mii,compact,8192));
     assert(!strcmp(mii.name,"My Owner") && mii.slot==9 && mii.from_gallery);
+    assert(spds_mii_from_image_slot(&mii,compact,8192,0));
+    assert(!strcmp(mii.name,"First") && mii.slot==0);
+    assert(spds_mii_from_image_slot(&mii,compact,8192,9));
+    assert(!strcmp(mii.name,"My Owner") && mii.slot==9);
+    assert(!spds_mii_from_image_slot(&mii,compact,8192,8));
+    assert(!spds_mii_from_image_slot(&mii,compact,8192,100));
     compact[39]^=1;
     assert(!spds_mii_from_image(&mii,compact,8192));
     compact[39]^=1;
@@ -84,8 +90,13 @@ int main(void) {
     put32(b1+13524,spds_crc32(b1,13524));
     assert(spds_mii_from_image(&mii,legacy,65536));
     assert(!strcmp(mii.name,"Latest"));
+    assert(spds_mii_from_image_slot(&mii,legacy,65536,0));
+    assert(!strcmp(mii.name,"Latest"));
+    assert(!spds_mii_from_image_slot(&mii,legacy,65536,1));
     b1[38]^=1;
     assert(spds_mii_from_image(&mii,legacy,65536));
+    assert(!strcmp(mii.name,"Earlier"));
+    assert(spds_mii_from_image_slot(&mii,legacy,65536,0));
     assert(!strcmp(mii.name,"Earlier"));
     free(legacy);
 
