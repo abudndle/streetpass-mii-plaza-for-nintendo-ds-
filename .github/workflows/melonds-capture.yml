@@ -1,0 +1,49 @@
+name: Genuine melonDS screenshot capture
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install X11 and melonDS
+        run: |
+          sudo add-apt-repository -y universe
+          sudo apt-get update
+          sudo apt-get install -y melonds xvfb xdotool imagemagick
+          command -v melonDS || command -v melonds
+      - name: Download latest validated homebrew ROM
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          gh run download --repo "${{ github.repository }}" --name streetpass-plaza-ds-homebrew --dir rom
+          test -s rom/streetpass-plaza-ds.nds
+          python3 tools/verify_nds.py rom/streetpass-plaza-ds.nds
+      - name: Capture real emulator window
+        run: |
+          set -eu
+          mkdir -p screenshots
+          EMULATOR="$(command -v melonDS || command -v melonds)"
+          xvfb-run -a -s '-screen 0 1024x768x24' sh -ec '
+            "$1" "$2" > /tmp/melonds.log 2>&1 &
+            pid=$!
+            trap "kill $pid 2>/dev/null || true" EXIT
+            sleep 12
+            kill -0 "$pid"
+            bash tools/capture_melonds.sh screenshots/plaza-boot.png
+          ' sh "$EMULATOR" rom/streetpass-plaza-ds.nds
+          python3 tools/check_png.py screenshots/plaza-boot.png
+      - name: Upload genuine screenshot only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: melonds-real-window-screenshot
+          path: screenshots/plaza-boot.png
+          if-no-files-found: error
+          retention-days: 7
