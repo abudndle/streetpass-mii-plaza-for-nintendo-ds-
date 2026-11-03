@@ -67,7 +67,12 @@ static void exercise_disk(void) {
     bytes[4]=2; bytes[5]=SPDS_PUZZLE_PIECES;
     crc=spds_crc32(bytes,16);
     for(unsigned i=0;i<4;i++) bytes[16+i]=(uint8_t)(crc>>(8*i));
+    /* Overwrite the 20-byte header, rather than appending a second record. */
+    rewind(f);
     assert(fwrite(bytes,1,sizeof bytes,f)==sizeof bytes);
+    assert(fflush(f)==0);
+    assert(fseek(f,0,SEEK_END)==0);
+    assert(ftell(f)==(long)sizeof bytes);
     assert(fclose(f)==0);
     SpdsPuzzle untouched=loaded;
     assert(spds_puzzle_load(folder,&loaded)==-1);
