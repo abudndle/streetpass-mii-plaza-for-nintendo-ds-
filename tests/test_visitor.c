@@ -68,6 +68,23 @@ int main(void) {
     assert(fwrite(wire,1,sizeof wire,f)==sizeof wire);assert(fclose(f)==0);
     assert(spds_visitor_poll(base,111,1700000001u,&stats)==0);
     assert(stats.duplicates==1 && stats.accepted==0);
+    assert(spds_visitor_read(base,345,&visitor));
+    /* Regression: a prior encounter can be logged even if its appearance
+     * cache was deleted or the original save failed. Replaying the bundle
+     * must restore the full Mii without counting a second encounter. */
+    char missing_avatar[300];
+    snprintf(missing_avatar,sizeof missing_avatar,
+             "%s/visitors/%016llx.mds",base,(unsigned long long)345);
+    assert(remove(missing_avatar)==0);
+    assert(!spds_visitor_read(base,345,&visitor));
+    f=fopen(incoming,"wb");assert(f);
+    assert(fwrite(wire,1,sizeof wire,f)==sizeof wire);assert(fclose(f)==0);
+    assert(spds_visitor_poll(base,111,1700000002u,&stats)==0);
+    assert(stats.duplicates==1 && stats.accepted==0 && stats.io_errors==0);
+    assert(access(incoming,F_OK)!=0);
+    assert(spds_visitor_read(base,345,&visitor));
+    assert(!strcmp(visitor.name,"Real DS Mii"));
+    assert(visitor.features[51]==0 && visitor.features[61]==2);
     /* Seven valid cached Miis exercise pages 1, 2 and the short final page.
      * Records use duplicate synthetic avatars so FAT enumeration order does
      * not affect the expected outcome. */
