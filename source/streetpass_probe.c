@@ -10,13 +10,20 @@ static uint32_t fcs32(const uint8_t *p,size_t n){
 /* Service IDs are five bytes; the final byte is a send-mode flag.
  * Some services carry an additional six bytes of 0xff. */
 static int has_plaza(const uint8_t *p,size_t n){
- size_t i=0;
- while(i+5u<=n){
-  if(!memcmp(p+i,plaza_prefix,sizeof(plaza_prefix)))return 1;
+ size_t i=0;int found=0;
+ /* Reject truncated service entries, including a trailing partial entry.
+  * A service is five bytes, optionally followed by six 0xff bytes. */
+ while(i<n){
+  if(n-i<5u)return 0;
+  if(!memcmp(p+i,plaza_prefix,sizeof(plaza_prefix)))found=1;
   i+=5u;
-  if(i+6u<=n){int all_ff=1;for(unsigned j=0;j<6u;j++)if(p[i+j]!=0xffu)all_ff=0;if(all_ff)i+=6u;}
+  if(n-i>=6u){
+   int all_ff=1;
+   for(unsigned j=0;j<6u;j++)if(p[i+j]!=0xffu)all_ff=0;
+   if(all_ff)i+=6u;
+  }
  }
- return 0;
+ return found;
 }
 static unsigned classify_80211(const uint8_t *p,size_t n){
  if(!p||n<24u||n>SPDS_3DS_PROBE_MAX_FRAME||p[0]!=0x40u||(p[1]&3u))return 0;
