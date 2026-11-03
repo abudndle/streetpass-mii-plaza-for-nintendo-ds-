@@ -517,8 +517,9 @@ int main(void) {
             relay_send_frames=0;
             for(unsigned tries=0;tries<SPDS_RELAY_CACHE;tries++) {
                 unsigned index=relay_send_index++%SPDS_RELAY_CACHE;
-                if(spds_relay_forward(&relay,index,forwarded)) {
-                    spds_wifi_send_relay(&radio,forwarded);
+                if(spds_relay_prepare(&relay,index,forwarded) &&
+                   spds_wifi_send_relay(&radio,forwarded)) {
+                    spds_relay_commit_forward(&relay,index);
                     break;
                 }
             }
@@ -545,7 +546,7 @@ int main(void) {
                         }
                         if(stored==SPDS_STORAGE_QUEUE_FULL) {
                             ++last_poll.invalid; /* no ACK: peer may retry after queue clear */
-                        } else if(stored>0) {
+                        } else if(stored==1) {
                             ++total;
                             ++last_poll.accepted;
                             save_puzzle_progress();
