@@ -51,6 +51,6 @@ test:
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/streetpass_probe.c tests/test_streetpass_probe.c -o build-host/test_streetpass_probe
 	./build-host/test_streetpass_probe
 	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/protocol.c source/storage.c tests/test_storage_restart.c -o build-host/test_storage_restart
-	@set -eu; d=$(mktemp -d); trap 'rm -rf "$d"' EXIT; ./build-host/test_storage_restart write "$d"; ./build-host/test_storage_restart read "$d"
+	@set -eu; rm -rf build-host/persistence-fixture; mkdir -p build-host/persistence-fixture; ./build-host/test_storage_restart write build-host/persistence-fixture; ./build-host/test_storage_restart read build-host/persistence-fixture; rm -rf build-host/persistence-fixture
 	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py tools/index_darc.py tools/verify_3ds_tmd.py tools/configure_melonds_dldi.py
 	python3 -m unittest discover -s tests -p 'test_*.py' -v
