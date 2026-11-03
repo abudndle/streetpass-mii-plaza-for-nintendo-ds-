@@ -9,8 +9,9 @@ GAME_AUTHOR := Independent homebrew
 GAME_ICON := assets/icon.bmp
 NDSTOOL_ARGS += -g SPDS
 SOURCEDIRS := source
-LIBS := -ldswifi9 -lnds9
-LIBDIRS := $(BLOCKSDS)/libs/dswifi
+LIBS := -lNE -ldswifi9 -lnds9
+BLOCKSDSEXT ?= /opt/wonderful/thirdparty/blocksds/external
+LIBDIRS := $(BLOCKSDSEXT)/nitro-engine $(BLOCKSDS)/libs/dswifi
 ARM7ELF := $(BLOCKSDS)/sys/arm7/main_core/arm7_dswifi_maxmod.elf
 CFLAGS += -std=gnu11 -Wall -Wextra -Werror
 
