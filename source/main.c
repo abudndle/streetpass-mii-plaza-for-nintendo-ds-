@@ -108,6 +108,7 @@ static int load_mii_from_sd(void) {
 static void refresh_roster(void) {
     if (!storage_ok) {
         visitor_count=0;
+        spds_plaza_3d_set_visible(0);
         spds_plaza_roster_set_count(&roster,0);
         return;
     }
@@ -122,6 +123,7 @@ static void refresh_roster(void) {
                   (int)((unsigned)page_total-page_start) : 0;
     if(visitor_count>(int)SPDS_PLAZA_PAGE_SIZE)
         visitor_count=(int)SPDS_PLAZA_PAGE_SIZE;
+    spds_plaza_3d_set_visible((unsigned)visitor_count);
 }
 static void save_puzzle_progress(void) {
     if(!storage_ok || !puzzle_ready) return;
