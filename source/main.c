@@ -455,6 +455,11 @@ int main(void) {
             }
             if(visitor_count && (down & KEY_A)) {
                 roster.selected=spds_plaza_roster_page(&roster)*SPDS_PLAZA_PAGE_SIZE+room_selected;
+                if(spds_plaza_3d_active()) {
+                    spds_plaza_3d_leave();
+                    consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
+                                31, 0, true, true);
+                }
                 room_open=0;roster_open=1;
                 spds_plaza_roster_show_detail(&roster);draw();continue;
             }
