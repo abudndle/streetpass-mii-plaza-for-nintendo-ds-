@@ -54,6 +54,71 @@ Research references:
 - Nintendo support, StreetPass is compatible with Nintendo 3DS software:
   https://en-americas-support.nintendo.com/app/answers/detail/a_id/404/p/50/c/950
 
+## Native 3DS exchange state machine (research milestone)
+
+The public protocol documentation separates native StreetPass into distinct
+layers. The existing `spds_3ds_probe_classify` implementation only parses
+the first discovery layer; it must not be described as a working native
+connection.
+
+1. **Discovery:** A 3DS broadcasts a probe request using
+   `Nintendo_3DS_continuous_scan_000`. Its Nintendo vendor information
+   advertises enabled five-byte StreetPass service identifiers. Mii Plaza
+   is `00 02 08 00 00`; the service flags indicate send/receive mode.
+2. **Peer response and directed exchange:** A peer may answer with a probe
+   response advertising a channel. The initiating device follows with
+   directed management frames. This is a separate state from simply
+   detecting the broadcast.
+3. **Protected link:** The data exchange uses WPA2/CCMP. The published
+   StreetPass notes describe CECD-derived key material using both peers'
+   StreetPass console IDs and MAC addresses. A DS implementation cannot
+   infer a valid session key from the public service beacon alone.
+4. **SPTCP transport:** The layer-2 transport has magic `0x5959`, constant
+   `0xaddeafbe`, sequence/acknowledgement byte counts, and FIN/SYN/RST/PSH/
+   ACK/END flags. Its documented three-way SYN, SYN+ACK, ACK handshake
+   precedes payload transfer. Segmentation and acknowledgements must be
+   implemented before larger SPMTP messages can be exchanged.
+5. **SPMTP application exchange:** Peers exchange a fixed alternating
+   sequence of information packet types (`41, 42, 43, 43, 11, 12, 21, 22,
+   23, 24, 31, 32, 33, 34, 81, 81`) before title message-box payloads.
+   The message-box turn-taking and FIN close sequence are stateful; simply
+   wrapping a DS visitor record in an SPTCP frame is not compatible.
+6. **CECD/Mii Plaza payload:** Native StreetPass messages use CECD message
+   and slot containers, including message headers, per-title identifiers,
+   timestamps, IDs, body data and integrity fields. The Mii Plaza title
+   payload needs its own validated parser/serializer. The project's SPDS
+   and SPDR formats are not substitutes for these containers.
+
+### Implementation gates derived from the protocol
+
+- Acquire and retain authorized, redacted packet captures from two owned
+  retail 3DS systems completing a successful Mii Plaza encounter. Captures
+  must cover discovery, directed management frames, protected data frames,
+  SPTCP handshake, all SPMTP info packets, message-box exchange and close.
+- Use those captures as golden fixtures for a passive offline dissector.
+  Strip MAC addresses, console IDs, key material, Mii personal data and
+  message bodies before committing fixtures.
+- Implement and host-test SPTCP state/segmentation independently from
+  radio hardware. Reject malformed lengths, invalid flag transitions,
+  duplicate/out-of-window segments and incomplete payloads.
+- Implement SPMTP state sequencing and message-box framing against
+  independently validated fixtures; do not synthesize retail keys or
+  identifiers.
+- Only then evaluate whether the DS wireless hardware and available
+  emulator networking expose the required 802.11 management/data frames and
+  CCMP capabilities. Emulator boot or GUI smoke tests are not evidence of
+  StreetPass transport support.
+- Final acceptance requires bidirectional encounter delivery into the
+  original Mii Plaza on an unmodified retail 3DS, and repeatable tests with
+  an unmodified 3DS emulator running the original title. Until then the
+  native path remains **not implemented / not verified**.
+
+Protocol references:
+- 3dbrew StreetPass discovery, CCMP and CECD message containers:
+  https://3dbrew.org/wiki/StreetPass
+- 3dbrew SPTCP header, flags, handshake, segmentation and close:
+  https://3dbrew.org/wiki/SPTCP
+
 ## Cross-platform boundary
 
 SPDR packets are not CECD records or native 3DS StreetPass frames. Stock 3DS firmware does not understand this DS application protocol. **Automatic DS ↔ unmodified-3DS Mii Plaza delivery is blocked/unproven:** no currently available, supported stock-firmware interface has been demonstrated to deliver arbitrary DS-origin visitors into native Mii Plaza and return native 3DS visitors to this DS app.
