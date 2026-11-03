@@ -138,6 +138,7 @@ int spds_wifi_tick(SpdsWireless *r,
         }
         if(probe_ready) {
             unsigned n=probe_size;
+            ++r->probe_frames;
             /* Raw callback only copies bytes; parse outside IRQ. */
             unsigned recognized=spds_3ds_probe_classify(probe_frame,n);
             probe_ready=0;
