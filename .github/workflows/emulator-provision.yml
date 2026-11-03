@@ -46,7 +46,12 @@ jobs:
       - name: Prepare Linux package index
         run: sudo apt-get update
       - name: Install AppImage runtime libraries
-        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libegl1 libgl1 libopengl0 libfuse2t64 libxcb-cursor0 xvfb xauth imagemagick
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Bound apt installation so a stalled package operation cannot hide
+          # emulator/screenshot regressions behind a long-running CI step.
+          timeout --signal=TERM --kill-after=15s 240s sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 libegl1 libgl1 libopengl0 libfuse2t64 libxcb-cursor0 xvfb xauth imagemagick
       - name: Attempt distro melonDS and AzaharPlus installation
         shell: bash
         run: |
