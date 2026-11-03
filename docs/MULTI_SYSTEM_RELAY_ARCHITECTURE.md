@@ -16,7 +16,7 @@ An optional 3DS homebrew companion could be a future alternative adapter, but it
 
 ## Critical compatibility boundary
 
-Nintendo documents StreetPass as a 3DS-family feature for compatible 3DS software. 3dbrew documents CECD-managed StreetPass data and the 3DS-specific encrypted local-WLAN exchange. DS/DSi Contact Mode is a separate mechanism; the 3DS manual explicitly distinguishes DS/DSi software from 3DS StreetPass titles. Therefore the current DS local-radio protocol cannot simply be broadcast to an unmodified 3DS and appear in Mii Plaza.
+Nintendo documents native StreetPass as a 3DS-family feature for compatible 3DS software. The 3DS local encounter path uses CECD/NWM and encrypted local-WLAN exchanges; separately, Nintendo's original StreetPass Relay Points used SpotPass/server communication to store and forward encounter data. DS/DSi Contact Mode is separate, and Nintendo's manuals state that DS/DSi software use prevents 3DS StreetPass operation while running. Therefore the DS ROM cannot itself act as a native StreetPass title on a stock 3DS, and a generic nearby AP cannot make an SPDR packet appear in Mii Plaza. The remaining research must identify a lawful, supported, stock-firmware relay-point service interface before claiming a cross-domain path.
 
 The project must not claim stock-3DS support until a real, unmodified retail console receives a valid native StreetPass Plaza record from the gateway and can return one. A custom access point alone, a successful DS radio test, or a host-side packet test is not proof.
 
@@ -36,7 +36,7 @@ The project must not claim stock-3DS support until a real, unmodified retail con
 1. **DS mesh:** at least three physical DS/DSi homebrew nodes exchange, forward, deduplicate and persist a test visitor. Emulator tests are supplemental.
 2. **Stock 3DS native relay:** two or more unmodified retail 3DS systems perform native StreetPass through the relay/gateway, including Mii Plaza delivery. No homebrew installation on these 3DS consoles.
 3. **Cross-domain bridge:** a DS-origin test visitor is delivered to stock 3DS Mii Plaza, and a stock-3DS-origin visitor is delivered to a DS Plaza node, with original provenance and sharing permissions retained.
-4. **Multi-system relay:** demonstrate at least three 3DS consoles and three DS/DSi nodes in one deployment; prove multi-hop forwarding, duplicate suppression, restart recovery, expiry, and isolation of private Miis.
+4. **Multi-system relay:** demonstrate at least three 3DS consoles and three DS/DSi nodes in one deployment; prove native 3DS-to-3DS encounters or relay-point delivery separately from DS mesh forwarding, then demonstrate cross-domain delivery only if a documented stock-firmware relay-point interface is found. Prove multi-hop forwarding, duplicate suppression, restart recovery, expiry, and isolation of private Miis.
 5. **Failure/security:** malformed records, replay, spoofed DS identifiers, exhausted hops, unavailable gateway, and storage-full conditions do not create false passes or corrupt saves.
 
 ## Known limitations and safety

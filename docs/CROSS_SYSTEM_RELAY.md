@@ -38,13 +38,9 @@ may claim to be the originating console when forwarding an existing visitor.
 
 1. Validate DS-to-DS relay on physical hardware, including duplicates and
    TTL expiry; do not treat successful host tests as radio validation.
-2. Build a *separate homebrew 3DS companion* with an explicit opt-in
-   transport and documented interoperable packet fixtures.
-3. Test DS -> 3DS companion -> DS and 3DS companion -> DS -> 3DS companion
-   using test visitor identities, including private/nonshareable Miis.
-4. Research native CECD interoperability behind the existing evidence gates
-   in `research/stock_3ds_evidence.json`. Never assert stock-3DS support
-   until all gates are demonstrated on actual hardware.
+2. Research the documented stock-3DS StreetPass Relay Point / SpotPass service flow and determine whether a lawful independently operated relay service can interoperate with unmodified retail firmware. Do not assume a generic access point or custom HTTP endpoint is sufficient.
+3. Implement and test the service adapter only after the required request/response protocol, authentication and payload contract are established from public documentation and authorized hardware observations.
+4. Test DS -> relay service -> stock 3DS Mii Plaza and the reverse direction on real consoles. A homebrew companion may be an optional fallback but does not satisfy the stock-3DS requirement.
 
 ## Current constraints
 
