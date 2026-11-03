@@ -53,7 +53,7 @@ jobs:
           set -eu
           wf-pacman -Sy --noconfirm blocksds-nitroengine
           wf-pacman -Ql blocksds-nitroengine
-          ne_header=$(find /opt/blocksds -type f -name NEMain.h -print -quit)
+          ne_header=$(find /opt/wonderful/thirdparty/blocksds/external -type f -name NEMain.h -print -quit)
           ne_root=$(dirname "$(dirname "$ne_header")")
           test -n "$ne_header"
           test -s "$ne_root/lib/libNE.a"
