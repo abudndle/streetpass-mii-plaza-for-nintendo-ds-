@@ -14,7 +14,7 @@ class CaptureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             d = pathlib.Path(tmp)
             xdotool = d / "xdotool"
-            xdotool.write_text("#!/bin/sh\nprintf '%s\\n' \"$FAKE_WINDOWS\"\n")
+            xdotool.write_text("#!/bin/sh\n[ -z "$FAKE_WINDOWS" ] || printf '%s\\n' \"$FAKE_WINDOWS\"\n")
             xdotool.chmod(0o755)
             imp = d / "import"
             imp.write_text("#!/bin/sh\nexit 99\n")
