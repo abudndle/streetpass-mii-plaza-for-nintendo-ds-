@@ -78,6 +78,38 @@ Copy `converted/visitor.dsm` to `visitor.dsm` and the generated
 models, textures, animations, extracted 3DS game assets, or their converted
 derivatives to the public repository or CI artifacts.
 
+## Additional BlocksDS libraries reviewed
+
+### uLibrary
+
+The BlocksDS package is `blocksds-ulibrary`; CI installs it alongside Nitro
+Engine so its headers, examples, and library are available for a later UI
+adapter. uLibrary is a 2D graphics/UI option built on the DS 3D hardware. It
+must not be blindly linked into the active Nitro Engine room renderer: both
+libraries may contend for the single DS 3D engine and display configuration.
+The existing libnds bottom-screen menu remains stable until a small uLibrary
+prototype is verified on hardware/emulator with the Nitro Engine top-screen
+room active. Only then should individual menu widgets migrate.
+
+### libslim
+
+libslim is not a transparent replacement for the current BlocksDS filesystem
+stack. It explicitly says it is not compatible with libfat, and its published
+build Makefile includes legacy devkitARM `ds_rules` rather than the BlocksDS
+build system. The current application calls `fatInitDefault()`,
+`fatGetDefaultDrive()`, and uses stdio/dirent APIs with explicit
+`fat:/streetpass-plaza` paths. Replacing `-lfat` with `-lslim` and changing
+the include alone would break the default-drive path logic and may not build
+under the current toolchain.
+
+Therefore libslim is recorded as a candidate filesystem backend, not silently
+substituted. A proper follow-up is to port/build libslim against BlocksDS,
+then add a small filesystem adapter that mounts DSi SD (`sd:/`) and Slot-1
+(`fat:/`) explicitly, selects the writable root, and tests directory scans,
+atomic save replacement, queue persistence, and recovery on both DS flashcart
+and DSi SD. Until those tests pass, the known-good BlocksDS libfat backend is
+retained.
+
 ## Important remaining work
 
 This is the engine integration milestone, not proof of authentic Mii rendering.
