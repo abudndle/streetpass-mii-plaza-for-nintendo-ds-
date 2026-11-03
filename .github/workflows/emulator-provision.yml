@@ -102,6 +102,7 @@ jobs:
               raise SystemExit('Required emulator executables missing: ' + ', '.join(missing))
           PY
       - name: Upload sanitized diagnostic
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: emulator-provision-preflight
