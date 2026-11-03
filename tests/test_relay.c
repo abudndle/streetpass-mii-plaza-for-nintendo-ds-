@@ -14,6 +14,7 @@ int main(void){
  assert(!spds_relay_encode(packet,&own,SPDS_RELAY_MAX_HOPS+1,1700000000));SpdsRecord zero={0,1700000000,19,"Invalid"};assert(!spds_relay_encode(packet,&zero,2,1700000000));assert(spds_relay_encode(packet,&own,2,1700000000));assert(spds_relay_accept(&r,packet,sizeof packet,0xffffffffu,&decoded)==-1);packet[13]^=1;assert(spds_relay_accept(&r,packet,sizeof packet,1700000004,&decoded)==-1);assert(!spds_relay_decode(&decoded,&hops,&at,packet,sizeof packet-1));spds_relay_init(&r,24,0);assert(spds_relay_accept(&r,next,sizeof next,1700000003,&decoded)==1);assert(!spds_relay_forward(&r,0,packet));
  /* A failed physical TX cannot consume a cached relay record. */
  SpdsRelay retry;spds_relay_init(&retry,555,1);
+ assert(spds_relay_encode(packet,&own,2,1700000000));
  assert(spds_relay_accept(&retry,packet,sizeof packet,1700000006,&decoded)==1);
  assert(spds_relay_mark_durable(&retry,own.sender_id,own.nonce));
  assert(spds_relay_prepare(&retry,0,forwarded));
