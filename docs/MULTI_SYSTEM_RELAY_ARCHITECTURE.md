@@ -54,6 +54,51 @@ Research references:
 - Nintendo support, StreetPass is compatible with Nintendo 3DS software:
   https://en-americas-support.nintendo.com/app/answers/detail/a_id/404/p/50/c/950
 
+## AzaharPlus emulator test path (ZipPass)
+
+AzaharPlus adds an emulator-side StreetPass workflow named **ZipPass**.
+Its documented desktop flow is available from `File > ZipPass` when no
+game is running. It requires downloaded 3DS system files, enabled LLE
+modules, and StreetPass enabled in the target game. Export produces a
+`.pass.zip` containing StreetPass data for installed games; import
+simulates StreetPass tags in the relevant game's queue. This is a useful
+repeatable 3DS-side test harness, but it is a file-mediated emulator
+workflow, not a live DS Wi-Fi/CECD connection.
+
+Planned test sequence:
+
+1. Install AzaharPlus and download its official system files through the
+   emulator's supported UI. Enable LLE modules.
+2. Install a legally dumped StreetPass Mii Plaza title supplied by the
+   tester; enable StreetPass and boot it far enough to initialize its
+   StreetPass data.
+3. Use AzaharPlus ZipPass to export a baseline `.pass.zip`, then import
+   a second controlled test archive and verify that the original Mii Plaza
+   shows the resulting simulated tag.
+4. In parallel, boot the public-source DS Plaza ROM in melonDS with
+   synthetic, non-personal example Mii fixtures. Verify its own visitor
+   import/export and persistence.
+5. Implement and test a format adapter only after the ZipPass archive
+   structure and CECD message container are validated from owned test data.
+   The DS visitor SPDV/SPDR formats are not ZipPass archives; never rename
+   or wrap them as `.pass.zip` and call them compatible.
+6. Keep three results separate: AzaharPlus ZipPass import/export,
+   melonDS DS visitor import/export, and actual DS-to-3DS conversion. The
+   third remains **NOT RUN** until a validated adapter exists.
+
+The CI workflow can install and launch both emulators and capture their
+first-run screens. It deliberately does not download, redistribute or
+publish the proprietary Mii Plaza title or personal 3DS data. No user-owned
+Mii Plaza title/system files were available as attachments or accessible
+Library files during this run, so title installation and real game testing
+cannot be reported as completed.
+
+AzaharPlus documentation:
+- https://github.com/AzaharPlus/AzaharPlus (ZipPass: File > ZipPass;
+  requires system files, LLE modules and StreetPass enabled)
+- https://github.com/AzaharPlus/AzaharPlus/discussions/117 (ZipPass
+  exchange and examples; community-provided archives are not test fixtures)
+
 ## Native 3DS exchange state machine (research milestone)
 
 The public protocol documentation separates native StreetPass into distinct
