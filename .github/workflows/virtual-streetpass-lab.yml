@@ -1,0 +1,105 @@
+name: Virtual StreetPass emulator lab
+on:
+  workflow_dispatch:
+    inputs:
+      capture_only:
+        description: Capture emulator startup windows; do not claim StreetPass exchange
+        type: boolean
+        default: true
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: virtual-streetpass-lab
+  cancel-in-progress: false
+jobs:
+  emulator-install-and-capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux GUI runtime and capture tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xdotool imagemagick unzip libfuse2 libegl1 libgl1 libopengl0 libglx0 libxkbcommon0
+      - name: Download latest AzaharPlus Linux AppImage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p lab/azaharplus lab/melonds screenshots
+          gh api repos/AzaharPlus/AzaharPlus/releases/latest > /tmp/azahar-release.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/azahar-release.json'))
+          assets=d.get('assets',[])
+          candidates=[a for a in assets if a['name'].lower().endswith('.appimage') and ('linux' in a['name'].lower() or 'x86_64' in a['name'].lower() or 'desktop' in a['name'].lower())]
+          if not candidates:
+              raise SystemExit('No Linux AppImage asset found in latest AzaharPlus release')
+          a=candidates[0]
+          print(a['browser_download_url'])
+          print(a['name'])
+          open('/tmp/azahar-url','w').write(a['browser_download_url'])
+          open('/tmp/azahar-name','w').write(a['name'])
+          print('AzaharPlus release:',d['tag_name'])
+          PY
+          curl --fail --location --retry 3 "$(cat /tmp/azahar-url)" -o "lab/azaharplus/$(cat /tmp/azahar-name)"
+          chmod +x "lab/azaharplus/$(cat /tmp/azahar-name)"
+          sha256sum "lab/azaharplus/$(cat /tmp/azahar-name)" | tee lab/azaharplus/SHA256SUMS
+      - name: Download official melonDS 1.1 Linux AppImage
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/melonds.zip https://github.com/melonDS-emu/melonDS/releases/download/1.1/melonDS-1.1-appimage-x86_64.zip
+          echo "bf377420a2e95f2cd2cdda17d5372b51c2534f858b038db9ec6d129554875124  /tmp/melonds.zip" | sha256sum --check
+          unzip -q /tmp/melonds.zip -d lab/melonds
+          find lab/melonds -type f -name '*.AppImage' -exec chmod +x {} \;
+      - name: Launch AzaharPlus and melonDS in isolated virtual displays
+        run: |
+          set -euo pipefail
+          AZAHAR="$(find lab/azaharplus -type f -name '*.AppImage' -print -quit)"
+          MELONDS_ZIP_APP="$(find lab/melonds -type f -name '*.AppImage' -print -quit)"
+          test -n "$AZAHAR"
+          test -n "$MELONDS_ZIP_APP"
+          (cd lab/azaharplus && "$AZAHAR" --appimage-extract >/tmp/azahar-extract.log 2>&1)
+          (cd lab/melonds && "$MELONDS_ZIP_APP" --appimage-extract >/tmp/melonds-extract.log 2>&1)
+          AZAHAR_RUN="$PWD/lab/azaharplus/squashfs-root/AppRun"
+          MELONDS_RUN="$PWD/lab/melonds/squashfs-root/AppRun"
+          test -x "$AZAHAR_RUN"
+          test -x "$MELONDS_RUN"
+          mkdir -p screenshots
+          xvfb-run -a -s '-screen 0 1280x900x24' sh -ec '
+            "$1" > /tmp/azaharplus.log 2>&1 &
+            p=$!
+            trap "kill $p 2>/dev/null || true" EXIT
+            sleep 25
+            kill -0 "$p"
+            bash tools/capture_window.sh "Azahar" screenshots/azaharplus-window.png
+          ' sh "$AZAHAR_RUN"
+          xvfb-run -a -s '-screen 0 1280x900x24' sh -ec '
+            "$1" > /tmp/melonds.log 2>&1 &
+            p=$!
+            trap "kill $p 2>/dev/null || true" EXIT
+            sleep 15
+            kill -0 "$p"
+            bash tools/capture_window.sh "melonDS" screenshots/melonds-window.png
+          ' sh "$MELONDS_RUN"
+          python3 tools/check_png.py screenshots/azaharplus-window.png
+          python3 tools/check_png.py screenshots/melonds-window.png
+      - name: Record exact emulator build metadata
+        run: |
+          printf 'AzaharPlus asset: %s\n' "$(cat /tmp/azahar-name)" > screenshots/emulator-versions.txt
+          printf 'melonDS: official 1.1 Linux AppImage\n' >> screenshots/emulator-versions.txt
+          printf 'Capture mode: startup-window only; no StreetPass exchange claimed\n' >> screenshots/emulator-versions.txt
+          cat /tmp/azaharplus.log || true
+          cat /tmp/melonds.log || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: virtual-streetpass-emulator-captures
+          path: |
+            screenshots/
+            /tmp/azaharplus.log
+            /tmp/melonds.log
+          if-no-files-found: warn
+          retention-days: 7
