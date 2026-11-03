@@ -20,5 +20,7 @@ fi
 mkdir -p "$(dirname "$out")"
 import -window "${ids[0]}" "$out"
 test -s "$out"
-echo "Captured emulator window: $out"
+# Reject malformed PNGs and embedded metadata before public sharing.
+python3 "$(dirname "$0")/check_png.py" "$out"
+echo "Captured and structurally validated emulator window: $out"
 echo "Upload this PNG to a GitHub issue or attach it in ChatGPT."
