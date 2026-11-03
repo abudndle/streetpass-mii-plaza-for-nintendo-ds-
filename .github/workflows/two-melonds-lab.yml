@@ -1,5 +1,9 @@
 name: Two-instance melonDS StreetPass lab
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/two-melonds-lab.yml'
+      - 'docs/VIRTUAL_STREETPASS_TEST_LAB.md'
   workflow_dispatch:
   workflow_run:
     workflows: ["Validate DS Plaza"]
@@ -12,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   two-instance-boot:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'schedule')
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'schedule')
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
