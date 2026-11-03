@@ -31,6 +31,8 @@ jobs:
           test -n "$APPIMAGE"
           chmod +x "$APPIMAGE"
           echo "$APPIMAGE" > /tmp/melonds-appimage-path
+          (cd /opt/melonds && "$APPIMAGE" --appimage-extract >/tmp/appimage-extract.log)
+          test -x /opt/melonds/squashfs-root/AppRun
       - name: Download ROM from the validated build run
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,13 +52,13 @@ jobs:
         run: |
           set -eu
           mkdir -p screenshots
-          APPIMAGE="$(cat /tmp/melonds-appimage-path)"
+          APPIMAGE="/opt/melonds/squashfs-root/AppRun"
           xvfb-run -a -s '-screen 0 1024x768x24' sh -ec '
             "$1" "$2" > /tmp/melonds.log 2>&1 &
             pid=$!
             trap "kill $pid 2>/dev/null || true" EXIT
             sleep 15
-            kill -0 "$pid"
+            if ! kill -0 "$pid" 2>/dev/null; then cat /tmp/melonds.log; exit 1; fi
             bash tools/capture_melonds.sh screenshots/plaza-boot.png
           ' sh "$APPIMAGE" rom/streetpass-plaza-ds.nds
           python3 tools/check_png.py screenshots/plaza-boot.png
