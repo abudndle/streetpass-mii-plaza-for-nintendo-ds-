@@ -51,13 +51,13 @@ with tempfile.TemporaryDirectory() as directory:
                + repr(task["source"]) + ").read_text()"]
     assert module.regression_fails_on_old_source(
         base, task["source"], orig_source.encode(), command)
-    assert (base / task["source"]).read_text() == "source token improved\\n"
+    assert (base / task["source"]).read_text() == "source token improved\n"
     assert not module.regression_fails_on_old_source(
         base, task["source"], orig_source.encode(), ["python3", "-c", "assert True"])
     assert not module.regression_fails_on_old_source(
         base, task["source"], orig_source.encode(),
         ["python3", "-c", "raise RuntimeError('broken setup')"])
-    assert (base / task["source"]).read_text() == "source token improved\\n"
+    assert (base / task["source"]).read_text() == "source token improved\n"
     try:
         module.generate_plan(base, focus, "test", "https://example.invalid")
     except ValueError:
