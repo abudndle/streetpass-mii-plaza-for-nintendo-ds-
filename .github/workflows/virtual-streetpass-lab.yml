@@ -74,7 +74,7 @@ jobs:
             trap "kill $p 2>/dev/null || true" EXIT
             sleep 25
             kill -0 "$p"
-            bash tools/capture_melonds.sh screenshots/azaharplus-window.png
+            bash tools/capture_window.sh "Azahar" screenshots/azaharplus-window.png
           ' sh "$AZAHAR_RUN"
           xvfb-run -a -s '-screen 0 1280x900x24' sh -ec '
             "$1" > /tmp/melonds.log 2>&1 &
@@ -82,7 +82,7 @@ jobs:
             trap "kill $p 2>/dev/null || true" EXIT
             sleep 15
             kill -0 "$p"
-            bash tools/capture_melonds.sh screenshots/melonds-window.png
+            bash tools/capture_window.sh "melonDS" screenshots/melonds-window.png
           ' sh "$MELONDS_RUN"
           python3 tools/check_png.py screenshots/azaharplus-window.png
           python3 tools/check_png.py screenshots/melonds-window.png
