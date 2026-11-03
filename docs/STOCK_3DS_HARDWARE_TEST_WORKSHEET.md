@@ -1,61 +1,18 @@
-# Native 3DS StreetPass hardware experiment worksheet
+# Native 3DS StreetPass / DS interoperability worksheet
 
-This worksheet is for a **stock, unmodified 3DS** and a DS/DSi running
-the homebrew Plaza. It is not a claim of compatibility.
+This worksheet separates independent tests; it does not imply DS homebrew participates in native StreetPass.
 
-## Preparation
+## A: stock 3DS ↔ stock 3DS
+Use at least two unmodified retail 3DS systems, compatible 3DS software (Mii Plaza for Plaza testing), StreetPass enabled, wireless on and no DS software active. Record model, firmware, Plaza version, time and redacted results.
 
-Use personally owned, consenting consoles. Record hardware model, firmware,
-DS/DSi mode, wireless driver version, and app build commit. Do not publish
-MAC addresses, console identifiers, keys, raw private encounter data, or
-identifying visitor records. Keep original captures offline.
+## B: DS/DSi homebrew mesh
+Use at least two (preferably three) DS/DSi consoles running this Plaza. Test discovery, packet send/receive, acknowledgements, retries, deduplication, hop limits, expiry, durable queue and restart recovery. Record console model, flashcart/SD setup, DSWifi build, app commit and redacted logs. Host tests are not radio proof.
 
-## Experiments (in order)
+## C: cross-platform feasibility
+SPDR is not native CECD/StreetPass. Nintendo says StreetPass is compatible only with 3DS software. SpotPass and online-dependent 3DS services ended April 8, 2024; do not depend on the former Nintendo Zone relay service.
 
-1. **Baseline:** With the stock 3DS Plaza configured for StreetPass,
-   observe the encounter process using a lawful independent wireless
-   monitor. Record only redacted frame type, channel, timing and counts.
-   Note that a passive capture alone is not DS radio support.
-2. **DS receive:** Determine whether the DS driver can report the
-   necessary management/action frames in its supported mode. Record
-   exact API, return codes and a reproducible trace. A scan listing
-   an access point is not sufficient.
-3. **DS transmit:** On the same hardware, test whether the driver can
-   transmit the necessary frame types with required addressing and
-   payload control. Do not attempt to impersonate another console or
-   reuse captured secrets.
-4. **Protocol:** Only if both frame directions are demonstrated, attempt
-   the authorized native discovery and CECD handshake. Separately
-   record encryption/key-exchange feasibility.
-5. **Visitor arrival:** Only after a verified handshake and secure
-   exchange, test a consented visitor arriving in the stock Plaza and
-   verify the reverse path. Check duplicate and sharing behavior.
-6. **Multi-hop:** Test DS -> stock 3DS -> DS and the reverse. Do not
-   assume stock 3DS redistributes a received visitor.
+Proceed only if a documented, currently available and lawful stock-firmware interface is identified. SSID scanning, AP association or generic Wi-Fi frames are not proof. Do not impersonate consoles, inject CECD records, reuse secrets or bypass authentication.
 
-## Report schema
+A cross-platform pass requires a real unmodified 3DS receiving a consented visitor in native Mii Plaza and successful reverse-direction delivery into DS Plaza, with provenance and consent retained. Until then mark the gate blocked/unproven.
 
-For each gate in `research/stock_3ds_evidence.json`, use
-`unknown`, `blocked` or `demonstrated`. Every demonstrated
-gate must include a reproducible evidence reference. A source-code
-inspection, emulator result or generic Wi-Fi association is not a
-successful native 3DS StreetPass encounter.
-
-Use:
-
-```sh
-python3 tools/audit_ds_radio.py source/wireless.c --require-native
-python3 tools/assess_3ds_compatibility.py research/stock_3ds_evidence.json --require-verified
-```
-
-Both commands are expected to fail until native support is demonstrated.
-Do not alter evidence status merely to make CI green.
-
-## Stop conditions
-
-If DS hardware or drivers cannot provide required management-frame
-control, record the specific capability gap and stop claiming native
-compatibility. If native encryption or the stock 3DS's visitor
-forwarding semantics prevent interoperability, document those limits.
-A 3DS homebrew companion is an alternative architecture, **not**
-a substitute for the user's requirement that the 3DS remain unmodified.
+Never publish MAC addresses, console IDs, keys, private Mii data, personal encounter records, firmware or proprietary assets.
