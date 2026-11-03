@@ -17,6 +17,7 @@
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
 #include "plaza_3d.h"
+#include "room_touch.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -452,6 +453,17 @@ int main(void) {
                 if(down & KEY_UP) room_selected=(room_selected+(unsigned)visitor_count-1u)%(unsigned)visitor_count;
                 else room_selected=(room_selected+1u)%(unsigned)visitor_count;
                 draw();continue;
+            }
+            if(visitor_count && (down & KEY_TOUCH)) {
+                touchPosition touch;
+                touchRead(&touch);
+                int slot = spds_room_touch_slot(touch.px, touch.py,
+                                                (unsigned)visitor_count);
+                if(slot >= 0) {
+                    room_selected = (unsigned)slot;
+                    draw();
+                    continue;
+                }
             }
             if(visitor_count && (down & KEY_A)) {
                 roster.selected=spds_plaza_roster_page(&roster)*SPDS_PLAZA_PAGE_SIZE+room_selected;
