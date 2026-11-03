@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Nitro Engine and DSMA BlocksDS package
         run: |
-          set -euo pipefail
+          set -eu
           wf-pacman -Sy --noconfirm blocksds-nitroengine
           test -s /opt/blocksds/external/nitro-engine/lib/libNE.a
           test -s /opt/blocksds/external/nitro-engine/include/NEMain.h
