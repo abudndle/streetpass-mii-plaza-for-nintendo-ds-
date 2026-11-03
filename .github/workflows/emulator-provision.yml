@@ -59,9 +59,9 @@ jobs:
               continue
             fi
             if [[ "$name" == 'melonDS' ]]; then
-              asset="$(jq -r '[.assets[] | select(.name | test("appimage-x86_64\\\\.zip$"))] | first | .browser_download_url // empty' <<<"$metadata")"
+              asset="$(jq -r '[.assets[] | select(.name | endswith("appimage-x86_64.zip"))] | first | .browser_download_url // empty' <<<"$metadata")"
             else
-              asset="$(jq -r '[.assets[] | select(.name | test("(?i)-linux\\\\.appimage$"))] | first | .browser_download_url // empty' <<<"$metadata")"
+              asset="$(jq -r '[.assets[] | select(.name | endswith("-linux.AppImage"))] | first | .browser_download_url // empty' <<<"$metadata")"
             fi
             if [[ -z "$asset" ]]; then
               echo "::warning::No supported Linux artifact published for $name release $tag"
@@ -86,9 +86,8 @@ jobs:
             echo "$name official release downloaded, SHA-256 recorded"
 
           done
+          echo "$RUNNER_TEMP/emulators" >> "$GITHUB_PATH"
       - name: Report emulator availability without claiming StreetPass
-        env:
-          PATH: ${{ runner.temp }}/emulators:${{ env.PATH }}
         run: |
           python3 tools/emulator_preflight.py --json | tee emulator-preflight.json
           python3 - <<'PY'
