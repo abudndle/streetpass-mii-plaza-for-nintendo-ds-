@@ -59,6 +59,27 @@ def validate_and_apply(root: Path, focus: str, plan: object) -> list[str]:
         (root / path).write_text(content, encoding="utf-8")
     return sorted(proposed)
 
+def regression_fails_on_old_source(root: Path, source_path: str,
+                                   original_source: bytes, command: list[str]) -> bool:
+    """Require a new assertion to fail against original code, not a setup error.
+
+    The original source is restored only for this trusted project test command;
+    the candidate is reinstated even if the command fails unexpectedly.
+    """
+    source = root / source_path
+    candidate = source.read_bytes()
+    if candidate == original_source:
+        return False
+    try:
+        source.write_bytes(original_source)
+        result = subprocess.run(command, cwd=root, capture_output=True,
+                                text=True, timeout=420, check=False)
+    finally:
+        source.write_bytes(candidate)
+    output = (result.stdout + "\n" + result.stderr).lower()
+    return result.returncode != 0 and (
+        "assertion" in output or "assertionerror" in output)
+
 def generate_plan(root: Path, focus: str, model: str, endpoint: str) -> dict:
     if endpoint != ENDPOINT:
         raise ValueError("Only local Ollama loopback endpoint allowed")
@@ -98,12 +119,17 @@ def run(root: Path, output_dir: Path, focus: str, model: str) -> bool:
     output_dir.mkdir(parents=True, exist_ok=True)
     task = TASKS[focus]
     original = {name: (root / task[name]).read_bytes() for name in ("source", "test")}
+    # Baseline must pass before a failing candidate regression counts as evidence.
+    subprocess.run(task["command"], cwd=root, check=True, timeout=420)
     last_error = None
     # Independent attempts: failed snippets must not contaminate retry inputs.
     for attempt in range(2):
         try:
             plan = generate_plan(root, focus, model, ENDPOINT)
             paths = validate_and_apply(root, focus, plan)
+            if not regression_fails_on_old_source(
+                    root, task["source"], original["source"], task["command"]):
+                raise ValueError("New assertion did not reproduce a failure on old source")
             # Trusted fixed commands only; model output is never executed as commands.
             subprocess.run(task["command"], cwd=root, check=True, timeout=420)
             subprocess.run(["git", "diff", "--check"], cwd=root, check=True, timeout=20)
