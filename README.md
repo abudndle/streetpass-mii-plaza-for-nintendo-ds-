@@ -27,6 +27,10 @@ No SD file can autonomously run in the background of unrelated DS ROMs.
 
 The room renderer is being migrated to AntonioND's Nitro Engine and its DSMA skeletal-animation support rather than a project-written 3D engine. The native BlocksDS build links `-lNE`; the renderer loads DSM/DSA visitor assets from `streetpass-plaza/models/` and retains the existing Mii records and Plaza controls. Authentic per-Mii model conversion and original Plaza assets remain separate unfinished work. See [Nitro Engine integration](docs/NITRO_ENGINE_INTEGRATION.md).
 
+### Full-game BlocksDS library plan
+
+The expanded [library adoption plan](docs/BLOCKSDS_FULL_GAME_LIBRARY_PLAN.md) maps SDK facilities to the main UI, Mii and visitor presentation, Puzzle Swap, sound, storage, wireless, DSi camera, asset conversion and performance. Priority candidates beyond 3D are NightFox's Lib for 2D scenes, Maxmod for audio, and LibDSF for fonts. Woopsi is an optional C++ GUI experiment. Each integration must pass an example build and emulator test before replacing existing code.
+
 ### Additional library evaluation
 
 The BlocksDS CI ROM build now provisions the official `blocksds-ulibrary` package beside Nitro Engine. uLibrary is reserved for a separately verified 2D menu/widget adapter; it is not yet linked into the active Nitro Engine renderer because both can contend for the DS 3D hardware. libslim has been reviewed but is not substituted for libfat yet: its published build uses legacy devkitARM rules and it is not libfat-compatible, while the current app depends on `fatGetDefaultDrive()` and explicit `fat:/` paths. See [the engine and filesystem integration notes](docs/NITRO_ENGINE_INTEGRATION.md).
