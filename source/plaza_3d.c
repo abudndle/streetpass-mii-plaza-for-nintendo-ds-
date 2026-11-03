@@ -4,6 +4,7 @@
 #include <NEMain.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #define SPDS_ROOM_VISITORS 3
 
@@ -11,6 +12,9 @@ static NE_Camera *room_camera;
 static NE_Model *visitor_models[SPDS_ROOM_VISITORS];
 static NE_Animation *visitor_idle;
 static int renderer_active;
+static unsigned visible_visitors;
+static unsigned selected_visitor;
+static unsigned animation_frame;
 
 static void restore_2d_display(void)
 {
@@ -28,7 +32,7 @@ static void draw_room(void *unused)
         return;
 
     NE_CameraUse(room_camera);
-    for (unsigned i = 0; i < SPDS_ROOM_VISITORS; ++i) {
+    for (unsigned i = 0; i < visible_visitors; ++i) {
         if (visitor_models[i])
             NE_ModelDraw(visitor_models[i]);
     }
@@ -118,14 +122,30 @@ int spds_plaza_3d_enter(const char *save_dir)
         NE_ModelScale(visitor_models[i], 0.65f, 0.65f, 0.65f);
     }
 
+    visible_visitors = 0;
+    selected_visitor = 0;
+    animation_frame = 0;
     renderer_active = 1;
     return 1;
+}
+
+void spds_plaza_3d_set_visitors(unsigned count, unsigned selected)
+{
+    visible_visitors = count > SPDS_ROOM_VISITORS ? SPDS_ROOM_VISITORS : count;
+    selected_visitor = selected < visible_visitors ? selected : 0;
 }
 
 void spds_plaza_3d_render(void)
 {
     if (!renderer_active)
         return;
+    ++animation_frame;
+    for (unsigned i = 0; i < visible_visitors; ++i) {
+        float base = (float)i * 1.15f - 1.15f;
+        float sway = sinf((float)(animation_frame + i * 23u) * 0.032f) * 0.18f;
+        float lift = i == selected_visitor ? 0.09f : 0.0f;
+        NE_ModelSetCoord(visitor_models[i], base + sway, lift, 0.0f);
+    }
     NE_ModelAnimateAll();
     NE_ProcessArg(draw_room, NULL);
 }
@@ -135,6 +155,7 @@ void spds_plaza_3d_leave(void)
     if (!renderer_active)
         return;
     renderer_active = 0;
+    visible_visitors = 0;
     NE_End();
     restore_2d_display();
     room_camera = NULL;
