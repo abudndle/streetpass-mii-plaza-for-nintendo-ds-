@@ -51,7 +51,7 @@ jobs:
       - name: Install Nitro Engine and DSMA BlocksDS package
         run: |
           set -eu
-          wf-pacman -Sy --noconfirm blocksds-nitroengine
+          wf-pacman -Sy --noconfirm blocksds-nitroengine blocksds-nflib
           wf-pacman -Ql blocksds-nitroengine
           ne_header=$(find /opt/wonderful/thirdparty/blocksds/external -type f -name NEMain.h -print -quit)
           ne_root=$(dirname "$(dirname "$ne_header")")
@@ -60,6 +60,11 @@ jobs:
           echo "BLOCKSDSEXT=$(dirname "$ne_root")" >> "$GITHUB_ENV"
           echo "Nitro Engine header: $ne_header"
           echo "Nitro Engine root: $ne_root"
+          nf_header=$(find /opt/wonderful/thirdparty/blocksds/external -type f -iname "nf_lib.h" -print -quit)
+          test -n "$nf_header"
+          nf_root=$(dirname "$(dirname "$nf_header")")
+          test -s "$nf_root/lib/libnflib.a"
+          echo "NightFox\047s Lib root: $nf_root"
       - name: Build native DS/DSi homebrew ROM
         run: make
       - name: Validate output exists and is not empty
