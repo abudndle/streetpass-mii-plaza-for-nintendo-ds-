@@ -8,6 +8,7 @@
  */
 int spds_plaza_3d_enter(const char *save_dir);
 void spds_plaza_3d_set_visitors(unsigned count, unsigned selected);
+void spds_plaza_3d_set_visible(unsigned count);
 void spds_plaza_3d_render(void);
 void spds_plaza_3d_leave(void);
 int spds_plaza_3d_active(void);
