@@ -11,6 +11,13 @@ class PuzzleStartupOrderTests(unittest.TestCase):
         poll = source.index("poll_now();", start)
         self.assertLess(load, poll)
 
+    def test_plaza_status_lines_do_not_overlap(self):
+        source = (ROOT / "source" / "main.c").read_text()
+        # Keep the visitor count visible when the radio status is rendered.
+        self.assertIn('printf("\\x1b[10;2HLocal radio: %-14s"', source)
+        self.assertIn('printf("\\x1b[17;2HCached Mii visitors: %u"', source)
+        self.assertNotIn('printf("\\x1b[10;2HCached Mii visitors: %u"', source)
+
     def test_corrupt_save_is_not_ready(self):
         source = (ROOT / "source" / "main.c").read_text()
         self.assertIn("if(spds_puzzle_load(save_dir,&puzzle)>=0) puzzle_ready=1;", source)
