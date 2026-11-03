@@ -429,7 +429,15 @@ int main(void) {
             if(changed) draw();
         }
         if(room_open) {
-            if(down & KEY_B) {room_open=0;roster_open=1;draw();continue;}
+            if(spds_plaza_3d_active()) spds_plaza_3d_render();
+            if(down & KEY_B) {
+                if(spds_plaza_3d_active()) {
+                    spds_plaza_3d_leave();
+                    consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
+                                31, 0, true, true);
+                }
+                room_open=0;roster_open=1;draw();continue;
+            }
             if(down & (KEY_LEFT|KEY_RIGHT)) {
                 spds_plaza_roster_change_page(&roster,(down & KEY_LEFT)?-1:1);
                 room_selected=0;
@@ -462,7 +470,11 @@ int main(void) {
         }
         if(roster_open && (down & KEY_START)) {
             if(spds_storage_queue_clear(save_dir)==0) waiting_visitors=0;
-            room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;draw();continue;
+            room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;
+            if(storage_ok && !spds_plaza_3d_enter(save_dir))
+                consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
+                            31, 0, true, true);
+            draw();continue;
         }
         if(roster_open && (down & KEY_Y)) {
             puzzle_open=1;
