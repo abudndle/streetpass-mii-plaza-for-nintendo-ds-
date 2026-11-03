@@ -58,20 +58,37 @@ jobs:
               echo "::warning::AzaharPlus tag $tag has not been security-reviewed for this workflow; skipping"
               continue
             fi
-            asset="$(jq -r '[.assets[] | select((.name | test("(?i)(x86_64|amd64).*\\.appimage$|linux.*(x64|x86_64).*\\.appimage$")) and (.name | test("(?i)arm|aarch64") | not))] | first | .browser_download_url // empty' <<<"$metadata")"
+            if [[ "$name" == 'melonDS' ]]; then
+              asset="$(jq -r '[.assets[] | select(.name | test("appimage-x86_64\\\\.zip$"))] | first | .browser_download_url // empty' <<<"$metadata")"
+            else
+              asset="$(jq -r '[.assets[] | select(.name | test("(?i)-linux\\\\.appimage$"))] | first | .browser_download_url // empty' <<<"$metadata")"
+            fi
             if [[ -z "$asset" ]]; then
-              echo "::warning::No suitable Linux x86_64 AppImage published for $name release $tag"
+              echo "::warning::No supported Linux artifact published for $name release $tag"
               continue
             fi
-            dest="$RUNNER_TEMP/emulators/$name.AppImage"
+            dest="$RUNNER_TEMP/emulators/$name.download"
             curl --fail --location --silent --show-error --retry 3 --max-time 180 --output "$dest" "$asset"
             test -s "$dest"
-            file "$dest"
             sha256sum "$dest"
-            chmod +x "$dest"
-            echo "$name upstream AppImage downloaded; no boot or StreetPass exchange claimed"
+            if [[ "$name" == 'melonDS' ]]; then
+              mkdir -p "$RUNNER_TEMP/emulators/melonds-unpacked"
+              unzip -q "$dest" -d "$RUNNER_TEMP/emulators/melonds-unpacked"
+              find "$RUNNER_TEMP/emulators/melonds-unpacked" -maxdepth 4 -type f -print
+              appimage="$(find "$RUNNER_TEMP/emulators/melonds-unpacked" -type f -iname '*.AppImage' -print -quit)"
+              if [[ -z "$appimage" ]]; then echo "::error::melonDS ZIP contains no AppImage"; exit 1; fi
+              chmod +x "$appimage"
+              ln -s "$appimage" "$RUNNER_TEMP/emulators/melonDS"
+            else
+              chmod +x "$dest"
+              ln -s "$dest" "$RUNNER_TEMP/emulators/azaharplus"
+            fi
+            echo "$name official release downloaded, SHA-256 recorded"
+
           done
       - name: Report emulator availability without claiming StreetPass
+        env:
+          PATH: ${{ runner.temp }}/emulators:${{ env.PATH }}
         run: |
           python3 tools/emulator_preflight.py --json | tee emulator-preflight.json
           python3 - <<'PY'
