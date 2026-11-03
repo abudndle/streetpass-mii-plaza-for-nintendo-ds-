@@ -467,7 +467,9 @@ int main(void) {
         if(roster_open && (down & KEY_START)) {
             if(spds_storage_queue_clear(save_dir)==0) waiting_visitors=0;
             room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;
-            if(storage_ok) spds_plaza_3d_enter(save_dir);
+            if(storage_ok && !spds_plaza_3d_enter(save_dir))
+                consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
+                            31, 0, true, true);
             draw();continue;
         }
         if(roster_open && (down & KEY_Y)) {
