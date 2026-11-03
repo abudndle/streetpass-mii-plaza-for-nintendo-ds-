@@ -3,6 +3,7 @@
 #include <dswifi9.h>
 #include <string.h>
 #include "relay.h"
+#include "streetpass_probe.h"
 
 /* Independent application identifier; not a Nintendo game or CECD title ID. */
 #define SPDS_WIFI_MAX_CLIENTS 15
@@ -16,6 +17,14 @@
 static volatile unsigned rx_ready;
 static volatile unsigned rx_size;
 static uint8_t rx_buffer[SPDS_RELAY_SIZE];
+static volatile unsigned probe_ready,probe_size;
+static uint8_t probe_frame[SPDS_3DS_PROBE_MAX_FRAME];
+static void probe_rx(int base,int len) {
+    if(len<24 || len>(int)sizeof(probe_frame) || probe_ready) return;
+    Wifi_RxRawReadPacket((u32)base,(u32)len,probe_frame);
+    probe_size=(unsigned)len;
+    probe_ready=1;
+}
 
 static void copy_in_irq(int base, int len) {
     if ((len != (int)SPDS_RELAY_SIZE && len != (int)SPDS_ACK_SIZE) ||
@@ -32,11 +41,13 @@ static void from_client(Wifi_MPPacketType type, int aid, int base, int len) {
     if (type == WIFI_MPTYPE_DATA) copy_in_irq(base, len);
 }
 int spds_wifi_start(SpdsWireless *r, enum SpdsWirelessMode mode) {
-    if (!r || (mode != SPDS_WIFI_HOST && mode != SPDS_WIFI_CLIENT))
+    if (!r || (mode != SPDS_WIFI_HOST && mode != SPDS_WIFI_CLIENT && mode != SPDS_WIFI_MONITOR))
         return -1;
     memset(r, 0, sizeof(*r));
     rx_ready = 0;
     rx_size = 0;
+    probe_ready = 0;
+    probe_size = 0;
     if (!Wifi_InitDefault(INIT_ONLY | WIFI_LOCAL_ONLY)) {
         r->phase = SPDS_PHASE_ERROR;
         r->last_error = -1;
@@ -45,6 +56,14 @@ int spds_wifi_start(SpdsWireless *r, enum SpdsWirelessMode mode) {
     r->mode = mode;
     r->phase = SPDS_PHASE_START;
     int result;
+    if (mode == SPDS_WIFI_MONITOR) {
+        Wifi_RawSetPacketHandler(probe_rx);
+        Wifi_EnableWifi();
+        Wifi_SetChannel(1);
+        Wifi_SetPromiscuousMode(1);
+        r->phase = SPDS_PHASE_MONITOR;
+        return 0;
+    }
     if (mode == SPDS_WIFI_HOST) {
         Wifi_MultiplayerFromClientSetPacketHandler(from_client);
         result = Wifi_MultiplayerHostMode(SPDS_WIFI_MAX_CLIENTS, SPDS_RELAY_SIZE, SPDS_RELAY_SIZE);
@@ -63,6 +82,10 @@ int spds_wifi_start(SpdsWireless *r, enum SpdsWirelessMode mode) {
 void spds_wifi_stop(SpdsWireless *r) {
     if (!r) return;
     if (r->mode != SPDS_WIFI_OFF) {
+        if(r->mode == SPDS_WIFI_MONITOR) {
+            Wifi_SetPromiscuousMode(0);
+            Wifi_RawSetPacketHandler(NULL);
+        }
         Wifi_IdleMode();
         Wifi_DisableWifi();
         Wifi_Deinit();
@@ -71,6 +94,8 @@ void spds_wifi_stop(SpdsWireless *r) {
     r->phase = SPDS_PHASE_OFF;
     rx_ready = 0;
     rx_size = 0;
+    probe_ready = 0;
+    probe_size = 0;
 }
 int spds_wifi_queue_ack(SpdsWireless *r,uint64_t sender,uint32_t nonce) {
     if(!r || r->mode==SPDS_WIFI_OFF ||
@@ -105,6 +130,21 @@ int spds_wifi_tick(SpdsWireless *r,
                    const uint8_t outgoing[SPDS_RELAY_SIZE],
                    uint8_t incoming[SPDS_RELAY_SIZE]) {
     if (!r || !outgoing || !incoming || r->mode == SPDS_WIFI_OFF) return 0;
+    if(r->mode == SPDS_WIFI_MONITOR) {
+        ++r->frames;
+        if((r->frames % 120u)==0u) {
+            static const int channels[]={1,6,11};
+            Wifi_SetChannel(channels[(r->frames/120u)%3u]);
+        }
+        if(probe_ready) {
+            unsigned n=probe_size;
+            /* Raw callback only copies bytes; parse outside IRQ. */
+            int recognized=spds_3ds_probe_is_streetpass(probe_frame,n);
+            probe_ready=0;
+            if(recognized) { ++r->probe_hits; return 3; }
+        }
+        return 0;
+    }
     if (r->phase == SPDS_PHASE_START && Wifi_LibraryModeReady()) {
         if (r->mode == SPDS_WIFI_HOST) {
             Wifi_SetChannel(7);
