@@ -38,6 +38,9 @@ not replacements for the visitor protocol or save format.
 ## Feature implementation plan
 
 ### A. Main interface and menus
+
+**Build milestone completed:** NightFox's Lib is now installed in both native-ROM CI workflows, its headers and static library are checked in the BlocksDS package prefix, and the application links `-lnflib` alongside Nitro Engine. This proves package provisioning and link compatibility, not runtime use of NFLib APIs or a migrated screen. The current libnds UI remains the active fallback.
+
 1. Keep the current libnds screen/input code as the known-good fallback.
 2. Build a small NightFox's Lib test scene for the title/menu screen, sprite
    buttons, backgrounds, touch feedback and transitions.
