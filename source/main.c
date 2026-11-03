@@ -513,7 +513,8 @@ int main(void) {
             for(unsigned tries=0;tries<SPDS_RELAY_CACHE;tries++) {
                 unsigned index=relay_send_index++%SPDS_RELAY_CACHE;
                 if(spds_relay_forward(&relay,index,forwarded)) {
-                    spds_wifi_send_relay(&radio,forwarded);
+                    if(spds_wifi_send_relay(&radio,forwarded))
+                        spds_relay_mark_forwarded(&relay,index);
                     break;
                 }
             }
