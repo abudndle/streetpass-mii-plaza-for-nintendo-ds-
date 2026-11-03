@@ -46,7 +46,7 @@ jobs:
       - name: Prepare Linux package index
         run: sudo apt-get update
       - name: Install AppImage runtime libraries
-        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libegl1 libgl1 libopengl0 libfuse2t64 libxcb-cursor0 xvfb xauth
+        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libegl1 libgl1 libopengl0 libfuse2t64 libxcb-cursor0 xvfb xauth imagemagick
       - name: Attempt distro melonDS and AzaharPlus installation
         shell: bash
         run: |
@@ -145,6 +145,35 @@ jobs:
             echo "::error::melonDS ROM boot probe exited with $status"
             exit 1
           fi
+      - name: Capture melonDS homebrew ROM display
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p emulator-screenshots
+          export ROM_PATH="$RUNNER_TEMP/homebrew/streetpass-plaza-ds.nds"
+          xvfb-run -a -s '-screen 0 1024x768x24' bash -c '
+            set -euo pipefail
+            melonDS "$ROM_PATH" > "$RUNNER_TEMP/melonds-screenshot.log" 2>&1 &
+            emulator_pid=$!
+            trap "kill $emulator_pid 2>/dev/null || true" EXIT
+            sleep 7
+            if ! kill -0 "$emulator_pid" 2>/dev/null; then
+              cat "$RUNNER_TEMP/melonds-screenshot.log"
+              echo "melonDS exited before screenshot capture" >&2
+              exit 1
+            fi
+            import -display "$DISPLAY" -window root emulator-screenshots/melonds-homebrew.png
+          '
+          test -s emulator-screenshots/melonds-homebrew.png
+          identify emulator-screenshots/melonds-homebrew.png
+          echo "Screenshot captured; content has not been visually validated"
+      - name: Upload melonDS screen capture for visual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: melonds-homebrew-screen
+          path: emulator-screenshots/melonds-homebrew.png
+          if-no-files-found: error
+          retention-days: 7
       - name: Headless GUI launch smoke tests (no ROM or system files)
         shell: bash
         run: |
