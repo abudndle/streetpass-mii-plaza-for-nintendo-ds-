@@ -208,7 +208,7 @@ static void draw(void) {
     printf("\x1b[12;2HLid search: %-14s",
            sleep_override?"EXPERIMENTAL":"Off");
     printf("\x1b[13;2H3DS: no native CECD link");
-    printf("\x1b[14;2HBackground: menu process only");
+    printf("\x1b[14;2HStorage: %-22.22s",storage_status);
     printf("\x1b[15;2HRaw %u 3DS %u Plaza %u",radio.probe_frames,radio.probe_hits,radio.plaza_probe_hits);
     if(puzzle_ready) printf("\x1b[21;2HPuzzle pieces: %u/%u",
                            spds_puzzle_completed(&puzzle),SPDS_PUZZLE_PIECES);
