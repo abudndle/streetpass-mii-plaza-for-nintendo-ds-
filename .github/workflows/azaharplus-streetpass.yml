@@ -1,0 +1,69 @@
+name: AzaharPlus StreetPass virtual environment
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/azaharplus-streetpass.yml'
+      - 'docs/AZAHAR_NINTENDOCLIENTS_RESEARCH.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: azaharplus-streetpass-virtual
+  cancel-in-progress: true
+
+jobs:
+  azaharplus-linux-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install virtual-display dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xdotool imagemagick unzip libfuse2 libegl1 libgl1 libopengl0 libglx0
+      - name: Download and verify AzaharPlus 2126.2-A
+        run: |
+          set -eu
+          curl --fail --location --retry 3 \
+            -o /tmp/azaharplus.AppImage \
+            https://github.com/AzaharPlus/AzaharPlus/releases/download/AZAHAR_PLUS_2126_2_A/azaharplus-2126.2-A-linux.AppImage
+          echo "14b1541d1f2c3640987d8ddd6bf30c6ce04c3ecac93ff1ec729e81c66cc103dd  /tmp/azaharplus.AppImage" | sha256sum --check
+          chmod +x /tmp/azaharplus.AppImage
+          cd /tmp
+          /tmp/azaharplus.AppImage --appimage-extract > /tmp/azaharplus-extract.log 2>&1
+          test -x /tmp/squashfs-root/AppRun
+      - name: Launch AzaharPlus and capture genuine emulator window
+        run: |
+          set -eu
+          mkdir -p screenshots
+          xvfb-run -a -s '-screen 0 1280x900x24' sh -ec '
+            /tmp/squashfs-root/AppRun > /tmp/azaharplus.log 2>&1 &
+            pid=$!
+            trap "kill $pid 2>/dev/null || true" EXIT
+            for n in $(seq 1 40); do
+              wid=$(xdotool search --onlyvisible --name "Azahar" 2>/dev/null | head -n1 || true)
+              if [ -n "$wid" ]; then break; fi
+              sleep 1
+            done
+            if [ -z "${wid:-}" ]; then
+              echo "AzaharPlus window not found"
+              cat /tmp/azaharplus.log
+              exit 1
+            fi
+            sleep 5
+            import -window "$wid" screenshots/azaharplus-boot.png
+            identify screenshots/azaharplus-boot.png
+          '
+      - name: Upload genuine AzaharPlus screenshot and startup log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: azaharplus-streetpass-virtual-boot
+          path: |
+            screenshots/azaharplus-boot.png
+            /tmp/azaharplus.log
+            /tmp/azaharplus-extract.log
+          if-no-files-found: warn
+          retention-days: 7
