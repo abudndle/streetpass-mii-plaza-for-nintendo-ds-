@@ -50,6 +50,7 @@ static void exercise_disk(void) {
     SpdsPuzzle before=loaded;
     assert(spds_puzzle_load(folder,&loaded)==-1);
     assert(memcmp(&before,&loaded,sizeof(loaded))==0);
+    assert(spds_puzzle_save(folder,&p)==0);
     /* A version-1 save has no cursor and must still load at slot zero. */
     f=fopen(file,"r+b");assert(f);
     uint8_t bytes[20];
