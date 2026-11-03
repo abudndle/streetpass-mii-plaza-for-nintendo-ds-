@@ -16,7 +16,7 @@ static size_t make_frame(uint8_t *frame) {
     frame[p++]=1;frame[p++]=8;
     static const uint8_t rates[]={0x82,0x84,0x8b,0x0c,0x12,0x96,0x18,0x24};
     memcpy(frame+p,rates,sizeof(rates));p+=sizeof(rates);
-    frame[p++]=221;frame[p++]=21;
+    frame[p++]=221;frame[p++]=22;
     const uint8_t tag[]={0x00,0x1f,0x32,0x01,0x11,0x05,
                          0x00,0x02,0x08,0x00,0x00,
                          0xf0,0x08,0xc8,0x34,0x6e,0x05,0x0f,0xc9,0xc6,0x80,0x5b};
@@ -34,11 +34,11 @@ int main(void) {
     f[1]=0x01;assert(!spds_3ds_probe_classify(f,n));f[1]=0;
     f[26]='X';assert(!spds_3ds_probe_classify(f,n));f[26]='N';
     /* A valid generic StreetPass service is not proof of Mii Plaza. */
-    f[n-15]^=0x01;
+    f[n-22u+6u]^=0x01;
     assert(spds_3ds_probe_classify(f,n)==SPDS_3DS_PROBE_STREETPASS);
     f[n-15]^=0x01;
     /* Wrong Nintendo vendor type must not match. */
-    f[n-18]=0x02;assert(!spds_3ds_probe_classify(f,n));f[n-18]=0x01;
+    f[n-22u+3u]=0x02;assert(!spds_3ds_probe_classify(f,n));f[n-22u+3u]=0x01;
     assert(spds_3ds_probe_classify(f,n)==3u);
     assert(!spds_3ds_probe_classify(f,SPDS_3DS_PROBE_MAX_FRAME+1u));
     puts("PASS: anonymous 3DS probe and Mii Plaza service recognition; reject truncated/spoof-pattern errors");
