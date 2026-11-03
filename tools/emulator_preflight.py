@@ -27,8 +27,12 @@ def probe(candidates):
                                   text=True, timeout=8, check=False)
             output = (proc.stdout or proc.stderr).strip().splitlines()
             version = output[0][:180] if output else "version unavailable"
-            return {"installed": True, "command": name, "version": version,
-                    "version_exit_code": proc.returncode}
+            loader_failure = (proc.returncode == 127 or
+                              "error while loading shared libraries" in version.lower())
+            return {"installed": not loader_failure, "command": name,
+                    "version": version, "version_exit_code": proc.returncode,
+                    "reason": "Dynamic loader failed" if loader_failure else
+                              "Executable invoked; game boot not tested"}
         except (OSError, subprocess.TimeoutExpired) as exc:
             return {"installed": True, "command": name,
                     "version_error": type(exc).__name__}
