@@ -85,3 +85,32 @@ handshake and native Mii Plaza visitor delivery remain unimplemented.
 The scan listens on channels 1, 6 and 11 while explicitly opted in.
 Do not label probe counts as completed StreetPass encounters, and do
 not install or run NetPass as part of this milestone (reference only).
+
+## Correct capture-format validation and monitor diagnostics
+
+The documented 3dbrew probe example uses a **21-byte** Nintendo vendor
+information element (IE type `0xdd`, length `0x15`) and an additional
+four-byte IEEE 802.11 frame check sequence (FCS). That FCS is not part
+of the Nintendo vendor IE. Earlier project tests had incorrectly
+represented the final FCS byte as part of a 22-byte vendor IE.
+
+The portable `streetpass_probe` classifier now handles raw IEEE 802.11
+probe requests with or without a valid trailing FCS; it also offers an
+offline radiotap-prefixed capture entry point. Regression fixtures model
+the documented 26-byte radiotap header, 24-byte MAC header, 21-byte
+Nintendo vendor IE, separate FCS, multiple service IDs, and varying
+Mii Plaza service flags. All unique MAC and console identifiers in
+fixtures are synthetic/anonymized.
+
+The DS monitor now displays **Raw / 3DS / Plaza** counters.
+- **Raw**: received wireless frames copied out of the interrupt handler.
+- **3DS**: frame contents matching the public StreetPass discovery pattern.
+- **Plaza**: those matches advertising the Mii Plaza service ID.
+
+These are anonymous pattern matches, not authenticated console identities,
+not proof of radio compatibility on physical hardware, and not CECD
+encounters. The current melonDS and AzaharPlus startup screenshot tests
+cannot themselves produce cross-emulator RF reception evidence. Future
+physical testing must distinguish radio-driver RX, probe classification,
+StreetPass response/action frames, encrypted traffic, and delivered visitor
+mailboxes. NetPass remains a reference only.
