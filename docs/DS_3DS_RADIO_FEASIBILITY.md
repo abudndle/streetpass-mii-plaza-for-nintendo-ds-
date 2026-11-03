@@ -42,3 +42,24 @@ claimed interoperability status.
 Bark Mode-inspired closed-lid execution remains limited to the *currently
 running* DS app or explicitly cooperating homebrew; an SD file alone cannot
 run a wireless service behind arbitrary other titles.
+
+
+## Emulator-assisted test path (added 2026-11-03)
+
+The earlier feasibility note focused on physical retail hardware and should not be read as ruling out emulator-assisted validation.
+
+- **Azahar** is the preferred 3DS emulator candidate. NetPass's own FAQ says emulator compatibility is not guaranteed but identifies Azahar as the only known emulator that can efficiently support NetPass. NetPass needs its required 3DS system/LLE modules and valid user-provided installation/system data.
+- **AzaharPlus ZipPass** is a separate experimental file-based StreetPass import/export path. It simulates StreetPass tags from pass ZIP files; it is not proof of live DS radio interoperability.
+- **melonDS standalone** supports local multiplayer between multiple emulator instances, but its own FAQ describes local multiplayer as work-in-progress/unstable and latency-sensitive. Use wired low-latency LAN where possible.
+- The libretro melonDS DS core's LAN/netplay feature is not equivalent to standalone melonDS local wireless; verify the exact emulator build and mode before testing.
+- Azahar's 3DS local wireless/CECD emulation and melonDS's DS local wireless are different emulated protocols. Running both emulators on one host does not automatically make them interoperable.
+
+### Emulator test matrix
+
+1. Boot the DS Plaza ROM in two standalone melonDS instances and verify DS custom host/client packets, queue cap and screenshot evidence.
+2. Boot two Azahar instances with legally supplied system files and a user-installed NetPass build; verify emulator-only NetPass/CECD behavior separately.
+3. Test Azahar local StreetPass/CECD between two Azahar instances if the build supports the required emulated services.
+4. Only test DS↔3DS exchange after implementing an explicit gateway or file adapter. Keep this labelled emulator bridge, not native CECD radio compatibility.
+5. Save actual window screenshots and logs for each emulator and label instance, version, mode and test direction. No synthetic UI mockups as evidence.
+
+Emulator success is useful protocol/integration evidence but does not replace physical DS/DSi or retail 3DS tests.

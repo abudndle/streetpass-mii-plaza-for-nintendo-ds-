@@ -25,11 +25,11 @@ No SD file can autonomously run in the background of unrelated DS ROMs.
 
 ## Current verified progress
 
-- Bootable-format `.nds` homebrew **compiles** using the official BlocksDS Docker image; GitHub Actions uploads the `streetpass-plaza-ds-homebrew` artifact. Actual emulator and hardware boot tests remain outstanding.
+- Bootable-format `.nds` homebrew **compiles** using the official BlocksDS Docker image; GitHub Actions uploads the `streetpass-plaza-ds-homebrew` artifact. A melonDS screenshot-capture workflow exists; emulator launch/screenshot artifacts must be checked per run. Cross-emulator StreetPass/NetPass tests remain outstanding.
 - Two-screen prototype interface, R4/DLDI FAT and DSi-compatible default SD storage.
 - Persistent profile `profile.sps`, `inbox/` queued import, `outbox/profile.sps` export, 8-hour encounter deduplication, host-tested versioned 64-byte exchange format.
 - Headless [menu/launcher polling component](docs/LAUNCHER_INTEGRATION.md): callable without opening the Plaza UI **while the menu process is running**; neither a firmware system service nor a closed-lid always-on receiver.
-- [Experimental DS-to-DS local wireless](docs/WIRELESS_EXPERIMENT.md) via DSWifi host/join. **Not yet confirmed on two consoles.** Nothing here impersonates or provides native 3DS StreetPass.
+- [Experimental DS-to-DS local wireless](docs/WIRELESS_EXPERIMENT.md) via DSWifi host/join. **Not yet confirmed on two consoles.** This is not native 3DS StreetPass. Emulator-assisted tests are now planned separately using Azahar for the 3DS/CECD/NetPass side and melonDS for DS local multiplayer; cross-emulator interoperability must be demonstrated rather than assumed.
 - [Private NCCH asset inventory and LZ decoder](docs/PRIVATE_ASSET_PIPELINE.md): all 115 RomFS file entries mapped and 56 compressed resources decoded from the user-provided base NCCH offline; *no copyrighted assets on GitHub*.
 - Automated CI: host tests every five minutes plus native ROM build and artifact on pushes/PRs/manual runs.
 

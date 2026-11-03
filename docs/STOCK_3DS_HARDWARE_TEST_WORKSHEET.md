@@ -16,3 +16,8 @@ Proceed only if a documented, currently available and lawful stock-firmware inte
 A cross-platform pass requires a real unmodified 3DS receiving a consented visitor in native Mii Plaza and successful reverse-direction delivery into DS Plaza, with provenance and consent retained. Until then mark the gate blocked/unproven.
 
 Never publish MAC addresses, console IDs, keys, private Mii data, personal encounter records, firmware or proprietary assets.
+
+
+## D: virtual emulator test tier
+
+Use Azahar for 3DS CECD/StreetPass/NetPass experiments and standalone melonDS for DS local multiplayer. NetPass documents Azahar as the only known emulator with efficient support but does not guarantee compatibility; use user-provided system files and a user-installed NetPass copy. Run two instances of each emulator independently first. Record exact versions, enabled LLE modules, app versions, logs and real screenshots. Do not assume the two emulators share a wireless transport. Any DS↔3DS adapter must be tested explicitly and labelled emulator-only. Emulator evidence never closes the physical retail hardware gate.

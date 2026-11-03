@@ -46,3 +46,8 @@ homebrew SPDR codec and four-hop forwarding are separate and **do not**
 prove compatibility with unmodified Nintendo 3DS systems. If the DS
 chipset cannot provide necessary frame control, native compatibility
 may be infeasible on this hardware.
+
+
+## Emulator coverage is a separate evidence tier
+
+The original fail-closed physical-hardware gates remain unchanged. Add an emulator-only tier: Azahar instances may exercise emulated 3DS CECD/StreetPass services and NetPass where the current emulator build and user-provided system files support them; melonDS standalone instances may exercise DS local multiplayer. These are separate emulators and their radio stacks are not automatically interoperable. A gateway/file adapter test is not proof of native DS-to-stock-3DS CECD compatibility.
