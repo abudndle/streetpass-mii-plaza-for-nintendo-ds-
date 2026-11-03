@@ -2,7 +2,7 @@
 
 An actively developed, independent homebrew adaptation targeting the original Nintendo 3DS **StreetPass Mii Plaza**, built for Nintendo DS/DS Lite flashcarts and DSi SD homebrew.
 
-## Mii Maker DS integration and portable folder
+## Multi-system DS/DSi + stock 3DS relay target\n\nThe intended network includes multiple DS/DSi Plaza clients and multiple **unmodified retail 3DS** systems through a separate native-StreetPass gateway. This cross-domain bridge is not implemented yet; the existing SPDS/SPDR DS radio packets are not understood by stock 3DS firmware. A 3DS homebrew companion is not required by the target design. See [multi-system relay architecture](docs/MULTI_SYSTEM_RELAY_ARCHITECTURE.md) for the topology and hardware acceptance gates.\n\n## Mii Maker DS integration and portable folder
 
 The Plaza also supports a versioned **full-Mii SD visitor bundle**. With
 a shareable linked Mii, `outbox/visitor.spv` carries the 134-byte Mii Maker
