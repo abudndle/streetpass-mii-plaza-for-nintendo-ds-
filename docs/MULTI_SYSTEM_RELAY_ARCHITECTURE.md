@@ -1,55 +1,48 @@
-# Multi-system StreetPass relay architecture
+# Corrected multi-system DS / DSi / 3DS status
 
-Status: **architecture and acceptance contract; stock-3DS interoperability is not yet implemented or proven**.
+**Status:** DS homebrew relay prototype. Native 3DS StreetPass is a separate Nintendo feature. Automatic delivery between this DS app and an unmodified 3DS is not implemented and has no verified supported path.
 
-## User-visible goal
+## Separate systems
 
-Operate one shared encounter network containing multiple Nintendo DS/DSi Plaza clients and multiple Nintendo 3DS systems. A visitor originating on one participant must be able to reach other eligible participants through one or more relay nodes, retain origin identity, and be delivered at most once per encounter window. This should feel like the original StreetPass relay experience, not a one-to-one cable transfer.
+- DS/DSi homebrew uses the independent SPDS/SPDR protocol and SD visitor bundles. Host tests do not prove radio interoperability; multi-console physical testing remains required.
+- Unmodified 3DS systems can still exchange native StreetPass locally with compatible 3DS software.
+- Nintendo states StreetPass is compatible only with Nintendo 3DS software. Nintendo also warns DS software may prevent StreetPass operation in Sleep Mode.
+- The DS app cannot run as a background service while another DS game controls the system.
 
-## Three distinct network roles
+## SpotPass and relay-point correction
 
-1. **DS/DSi Plaza node** — runs this NDS homebrew while it is the active application. It uses the project's independent SPDS/SPDR transport, SD persistence, consent settings and visitor cache. It cannot keep executing after another DS game takes control.
-2. **Stock 3DS native StreetPass node** — an unmodified retail 3DS uses Nintendo's built-in StreetPass/CECD path with other compatible 3DS systems and supported native relay points. It does not understand SPDS packets and cannot run a custom companion.
-3. **Gateway/relay bridge** — a separately powered relay appliance or host with independent interfaces for DS homebrew traffic and the 3DS native StreetPass relay exchange. It must translate only explicitly supported Plaza visitor records, retain provenance/consent, and keep native CECD transport separate from the DS packet format.
+Nintendo ended SpotPass and other 3DS online functionality on **April 8, 2024**. Nintendo's system-update history documents the historical StreetPass relay feature at Nintendo Zone locations; Nintendo's original relay-point design used server-backed store-and-forward. Do not assume that discontinued Nintendo service remains available. A generic Wi-Fi AP, local server or SPDR broadcast is not automatically a native StreetPass relay point.
 
-An optional 3DS homebrew companion could be a future alternative adapter, but it is **not** the target dependency for the user's unmodified-3DS requirement.
+## Cross-platform boundary
 
-## Critical compatibility boundary
+SPDR packets are not CECD records or native 3DS StreetPass frames. Stock 3DS firmware does not understand this DS application protocol. **Automatic DS ↔ unmodified-3DS Mii Plaza delivery is blocked/unproven:** no currently available, supported stock-firmware interface has been demonstrated to deliver arbitrary DS-origin visitors into native Mii Plaza and return native 3DS visitors to this DS app.
 
-Nintendo documents StreetPass as a 3DS-family feature for compatible 3DS software. 3dbrew documents CECD-managed StreetPass data and the 3DS-specific encrypted local-WLAN exchange. DS/DSi Contact Mode is a separate mechanism; the 3DS manual explicitly distinguishes DS/DSi software from 3DS StreetPass titles. Therefore the current DS local-radio protocol cannot simply be broadcast to an unmodified 3DS and appear in Mii Plaza.
+Do not claim stock-3DS support until real retail hardware completes both directions through a documented, lawful, currently available interface. Do not claim an ordinary gateway can inject CECD data. Do not build around discontinued SpotPass as if it were live.
 
-The project must not claim stock-3DS support until a real, unmodified retail console receives a valid native StreetPass Plaza record from the gateway and can return one. A custom access point alone, a successful DS radio test, or a host-side packet test is not proof.
+## Feasible paths
 
-## Multi-node forwarding model
+1. Complete and physically validate the independent DS/DSi mesh, including persistent queues, consent, deduplication, expiry and recovery.
+2. Preserve native 3DS-to-3DS StreetPass as a separate function on unmodified consoles running compatible 3DS software.
+3. Investigate user-mediated cross-platform transfer (supported QR/image or SD workflows) without calling it automatic StreetPass.
+4. An optional 3DS homebrew companion could join a custom network, but it does not meet the no-3DS-homebrew requirement.
+5. Revisit automatic stock-3DS interoperability only if a documented, available, lawful interface is identified and verified on real hardware.
 
-- Each origin has a stable origin-system class (DS, DSi, or 3DS), origin identifier, encounter nonce, creation time, and source application.
-- Each record carries an explicit Mii appearance-sharing permission and redistribution permission. Private Miis never enter the relay queue.
-- Gateways store-and-forward records between transport domains. The relay does not rewrite origin identity to impersonate a receiving console.
-- Every hop decrements a bounded hop budget exactly once. Each node forwards a given origin+nonce at most once; duplicates and expired records are rejected.
-- Use a durable queue with bounded size, expiry, replay protection, and per-origin rate limits. Do not rely on a single in-memory cache for persistent relay history.
-- A record is acknowledged only after durable storage. Failed or interrupted transfers remain retryable without creating a second visitor.
-- Separate DS radio, native 3DS CECD, and gateway translation adapters. Never treat CRC as sender authentication; use authenticated gateway-to-gateway transport and preserve untrusted-origin labels for legacy DS packets.
-- Provide a local diagnostic screen showing discovered nodes, queued records, forwarded/received counts, and last error without exposing private Mii data.
+## DS network contract
 
-## Required verification gates
+Preserve origin-system class, origin pseudonym, encounter nonce, timestamp, source app, consent flags, bounded hop count and version. Relays must not rewrite origin identity. Use durable queues, acknowledgement after durable storage, expiry, replay/duplicate suppression, rate limits and authenticated gateway-to-gateway transport. CRC detects corruption, not authentication. Private Miis never enter relay queues.
 
-1. **DS mesh:** at least three physical DS/DSi homebrew nodes exchange, forward, deduplicate and persist a test visitor. Emulator tests are supplemental.
-2. **Stock 3DS native relay:** two or more unmodified retail 3DS systems perform native StreetPass through the relay/gateway, including Mii Plaza delivery. No homebrew installation on these 3DS consoles.
-3. **Cross-domain bridge:** a DS-origin test visitor is delivered to stock 3DS Mii Plaza, and a stock-3DS-origin visitor is delivered to a DS Plaza node, with original provenance and sharing permissions retained.
-4. **Multi-system relay:** demonstrate at least three 3DS consoles and three DS/DSi nodes in one deployment; prove multi-hop forwarding, duplicate suppression, restart recovery, expiry, and isolation of private Miis.
-5. **Failure/security:** malformed records, replay, spoofed DS identifiers, exhausted hops, unavailable gateway, and storage-full conditions do not create false passes or corrupt saves.
+## Verification gates
 
-## Known limitations and safety
-
-- The current SPDR v1 packet is a homebrew metadata format, not Nintendo CECD data, not cryptographically authenticated, and not a native 3DS StreetPass packet.
-- Existing DS-to-DS radio code has not been proven on multiple physical consoles.
-- The project does not have an implemented CECD/native 3DS gateway. Do not claim that the current build works with stock 3DS.
-- Keep proprietary Nintendo assets, firmware, keys, CECD saves and private captures out of the public repository and CI artifacts. Use only authorized test records and user-controlled devices.
-- Nintendo's original relay-point service was a store-and-forward model. This project may reproduce the user experience with an independently operated gateway, but must not imply access to Nintendo's discontinued relay servers.
+1. Three physical DS/DSi nodes exchange and forward test visitors; verify persistence, deduplication, hop limit, expiry and restart recovery.
+2. Separately verify native StreetPass between at least two unmodified 3DS systems running compatible 3DS software.
+3. Do not mark cross-platform stock-3DS delivery passed without a documented supported interface and real-hardware delivery in both directions.
+4. Publish redacted hardware details/screenshots only; never publish console IDs, keys, private Mii data, personal encounter records, firmware or proprietary assets.
 
 ## References
 
-- [Nintendo: StreetPass Feature Overview](https://en-americas-support.nintendo.com/app/answers/detail/a_id/404/p/50/c/950)
-- [Nintendo: Hardware Operations Manual](https://assets.nintendo.eu/image/upload/v1626222882/NAL/Support/3DSOperationsManual_AU.pdf)
-- [3dbrew: StreetPass / CECD research](https://www.3dbrew.org/wiki/StreetPass)
-- [Nintendo Iwata Asks: StreetPass Relay Points](https://iwataasks.nintendo.com/interviews/3ds/streetpass-relay-points/0/0/)
+- [Nintendo StreetPass overview](https://en-americas-support.nintendo.com/app/answers/detail/a_id/404/p/50/c/950)
+- [Nintendo StreetPass setup](https://en-americas-support.nintendo.com/app/answers/detail/a_id/681/~/tips-for-setting-up-streetpass)
+- [Nintendo: SpotPass ended April 8, 2024](https://en-americas-support.nintendo.com/app/answers/detail/a_id/403/p/50/c/183)
+- [Nintendo: 3DS/Wii U online service discontinuation](https://en-americas-support.nintendo.com/app/answers/detail/a_id/63227/p/603/c/871)
+- [Nintendo 3DS system update history](https://en-americas-support.nintendo.com/app/answers/detail/a_id/667/p/172)
+- [Nintendo Iwata Asks: StreetPass Relay Points](https://iwataasks.nintendo.com/interviews/3ds/streetpass-relay-points/0/2/)

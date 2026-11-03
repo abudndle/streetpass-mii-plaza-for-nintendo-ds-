@@ -2,7 +2,11 @@
 
 An actively developed, independent homebrew adaptation targeting the original Nintendo 3DS **StreetPass Mii Plaza**, built for Nintendo DS/DS Lite flashcarts and DSi SD homebrew.
 
-## Multi-system DS/DSi + stock 3DS relay target\n\nThe intended network includes multiple DS/DSi Plaza clients and multiple **unmodified retail 3DS** systems through a separate native-StreetPass gateway. This cross-domain bridge is not implemented yet; the existing SPDS/SPDR DS radio packets are not understood by stock 3DS firmware. A 3DS homebrew companion is not required by the target design. See [multi-system relay architecture](docs/MULTI_SYSTEM_RELAY_ARCHITECTURE.md) for the topology and hardware acceptance gates.\n\n## Mii Maker DS integration and portable folder
+## Multi-system DS/DSi + 3DS compatibility (corrected)
+
+The project goal is a multi-node DS/DSi visitor network alongside multiple unmodified 3DS systems. These are currently separate networks: DS homebrew uses SPDS/SPDR; unmodified 3DS consoles use native StreetPass with compatible 3DS software. Nintendo says StreetPass is only compatible with 3DS software. SpotPass and other 3DS online services ended April 8, 2024, so the former Nintendo Zone relay service must not be treated as an available bridge. **Automatic DS ↔ unmodified-3DS Mii Plaza delivery is not implemented and has no verified supported path.** See [corrected multi-system architecture](docs/MULTI_SYSTEM_RELAY_ARCHITECTURE.md).
+
+## Mii Maker DS integration and portable folder
 
 The Plaza also supports a versioned **full-Mii SD visitor bundle**. With
 a shareable linked Mii, `outbox/visitor.spv` carries the 134-byte Mii Maker
@@ -69,7 +73,7 @@ Use [BlocksDS](https://blocksds.skylyrac.net/) and Wonderful Toolchain, then `ma
 
 Port the 3DS Mii Plaza rooms, original Miis, visitor data, touch UI, animations, Puzzle Swap, Find Mii, games, achievements, audio and other applicable features from the user's authorized assets. The user-provided base NCCH is **not proof that DLC game assets are present**; unprovided updates/DLC cannot be fabricated.
 
-An unmodified retail 3DS cannot exchange this project's independent DS radio protocol. DS ↔ 3DS **requires a separate compatible companion**, or future verified bridging code; the 3DS console operating system's StreetPass service is different. Standard DS/DSi homebrew cannot keep executing while another application has taken control, and closed-lid sleep radio operation remains unverified.
+An unmodified retail 3DS does not understand this project's independent DS radio protocol. Native StreetPass remains a separate 3DS-software feature. SpotPass ended April 8, 2024, so do not rely on Nintendo's former relay-point service. DS ↔ unmodified-3DS automatic Plaza delivery is currently unimplemented and unproven; optional 3DS homebrew or manual user-mediated transfer are separate alternatives, not native StreetPass. Standard DS/DSi homebrew cannot keep executing while another application has taken control, and closed-lid sleep radio operation remains unverified.
 
 ## References and development
 
