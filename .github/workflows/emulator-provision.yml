@@ -131,6 +131,15 @@ jobs:
         with:
           name: emulator-smoke-homebrew
           path: ${{ runner.temp }}/homebrew
+      - name: Provision writable DLDI folder for melonDS
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HOME="$RUNNER_TEMP/melonds-home"
+          python3 tools/configure_melonds_dldi.py --home "$HOME" --sd-folder "$RUNNER_TEMP/melonds-dldi-sd"
+          echo "HOME=$HOME" >> "$GITHUB_ENV"
+          test -f "$HOME/.config/melonDS/melonDS.ini"
+          grep -E '^DLDI(Enable|ReadOnly|FolderSync|FolderPath)=' "$HOME/.config/melonDS/melonDS.ini"
       - name: Headless melonDS ROM boot smoke probe
         shell: bash
         run: |
