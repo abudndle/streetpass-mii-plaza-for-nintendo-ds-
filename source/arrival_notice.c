@@ -8,7 +8,7 @@ void spds_arrival_notice_show(SpdsArrivalNotice *s,const char *name,unsigned fra
     unsigned i=0;
     for(;i+1u<SPDS_ARRIVAL_NAME_SIZE && name[i];i++) {
         unsigned char ch=(unsigned char)name[i];
-        s->name[i]=(char)(ch>=32 && ch<=126 ? ch : '?');
+        s->name[i]=(char)(ch>=32 && ch<=126 ? ch : '?'); if (i >= SPDS_ARRIVAL_NAME_SIZE - 1) break;
     }
     s->name[i]=0;
     s->frames_left=frames;

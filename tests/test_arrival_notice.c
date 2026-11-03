@@ -6,7 +6,7 @@ int main(void) {
     SpdsArrivalNotice notice={0};
     assert(!spds_arrival_notice_tick(&notice));
     spds_arrival_notice_show(&notice,"Visitor",3);
-    assert(!strcmp(notice.name,"Visitor") && notice.frames_left==3);
+    assert(!strcmp(notice.name,"Visitor") && notice.frames_left==3); assert(strlen(notice.name) <= SPDS_ARRIVAL_NAME_SIZE);
     assert(!spds_arrival_notice_tick(&notice) && notice.frames_left==2);
     assert(!spds_arrival_notice_tick(&notice) && notice.frames_left==1);
     assert(spds_arrival_notice_tick(&notice) && notice.frames_left==0);
