@@ -117,7 +117,7 @@ int spds_visitor_list_page(const char *base,unsigned offset,SpdsMii *out,unsigne
     if(!d) return errno==ENOENT?0:-1;
     unsigned count=0,scanned=0;
     struct dirent *entry;
-    while((entry=readdir(d))!=NULL && scanned<512) {
+    while((entry=readdir(d))!=NULL && scanned<4096) {
         uint64_t id=parse_id(entry->d_name);
         if(!id) continue;
         scanned++;
@@ -131,6 +131,13 @@ int spds_visitor_list_page(const char *base,unsigned offset,SpdsMii *out,unsigne
 }
 int spds_visitor_list(const char *base,SpdsMii *out,unsigned cap) {
     return spds_visitor_list_page(base,0,out,cap);
+}
+int spds_visitor_count(const char *base,unsigned *count) {
+    if(!count) return -1;
+    int total=spds_visitor_list_page(base,0,NULL,0);
+    if(total<0) return -1;
+    *count=(unsigned)total;
+    return 0;
 }
 int spds_visitor_poll(const char *base,uint64_t own_id,uint32_t now,
                       SpdsVisitorStats *stats) {
@@ -164,6 +171,9 @@ int spds_visitor_poll(const char *base,uint64_t own_id,uint32_t now,
            !spds_visitor_decode(&profile,&avatar,buffer,sizeof buffer)) {
             stats->invalid++; continue;
         }
+        unsigned population=0;
+        if(spds_visitor_count(base,&population)!=0) { stats->io_errors++; continue; }
+        if(population>=SPDS_PLAZA_POPULATION_LIMIT) { stats->population_full++; continue; }
         int accepted=spds_storage_receive(base,&profile,own_id,now);
         if(accepted<0) { stats->io_errors++; continue; }
         if(accepted==SPDS_STORAGE_QUEUE_FULL) { stats->queue_full++; continue; }
