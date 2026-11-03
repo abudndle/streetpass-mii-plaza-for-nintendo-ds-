@@ -111,7 +111,7 @@ static int queue_append(const char *base,const SpdsRecord *r,uint32_t now) {
     char path[SPDS_PATH_MAX];
     if(path_join(path,sizeof(path),base,"pending.tsv")) return -1;
     FILE *f=fopen(path,"a"); if(!f) return -1;
-    int n=fprintf(f,"%016llx\\t%lu\\n",(unsigned long long)r->sender_id,(unsigned long)now);
+    int n=fprintf(f,"%016llx\t%lu\n",(unsigned long long)r->sender_id,(unsigned long)now);
     int ok=n>0 && fflush(f)==0; if(fclose(f)!=0) ok=0;
     return ok?0:-1;
 }
