@@ -86,5 +86,3 @@ An unmodified retail 3DS does not understand this project's independent DS radio
 [Milestones](docs/MILESTONES.md) · [protocol](docs/PROTOCOL.md) · [hardware](docs/HARDWARE.md) · [asset inventory](docs/ASSET_INVENTORY.md) · [wireless test plan](docs/WIRELESS_EXPERIMENT.md)
 
 No source code from OpenPass or GPL NetPass is copied here; reference projects have separate licensing. The MIT license applies only to independent code contributed to this repository. Nintendo's copyrighted game and resources are **not** licensed under MIT and must stay out of public commits and CI.
-
-The DSi camera and QR/SD import roadmap is documented in [DSi camera and import integration](docs/DSI_CAMERA_AND_IMPORT_INTEGRATION.md), based on Epicpkmn11's camera demo and dsidl plus the BlocksDS/libnds API references. These are implementation references, not yet shipped camera features.
