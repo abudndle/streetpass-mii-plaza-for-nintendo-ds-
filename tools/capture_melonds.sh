@@ -22,7 +22,9 @@ if (( ${#ids[@]} != 1 )); then
   exit 1
 fi
 mkdir -p "$(dirname "$out")"
-# Capture original emulator pixels, then remove nonessential ancillary metadata chunks.\nimport -window "${ids[0]}" "$out"\npython3 "$(dirname "$0")/strip_png_metadata.py" "$out"
+# Capture original emulator pixels, then remove nonessential ancillary metadata chunks.
+import -window "${ids[0]}" "$out"
+python3 "$(dirname "$0")/strip_png_metadata.py" "$out"
 # Fail closed if the capture did not produce a nonempty file.
 test -s "$out"
 # Reject malformed PNGs and embedded metadata before public sharing.
