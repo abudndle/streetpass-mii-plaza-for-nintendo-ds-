@@ -22,8 +22,9 @@ typedef struct {
 void spds_relay_init(SpdsRelay *r,uint64_t own_id,int enabled);
 int spds_relay_encode(uint8_t packet[SPDS_RELAY_SIZE],const SpdsRecord *source,unsigned hops,uint32_t originated);
 int spds_relay_decode(SpdsRecord *source,unsigned *hops,uint32_t *originated,const uint8_t *packet,unsigned size);
-/* 1 new packet; 0 duplicate/own; -1 invalid packet. */
 int spds_relay_accept(SpdsRelay *r,const uint8_t *packet,unsigned size,uint32_t now,SpdsRecord *source);
-/* Forward each accepted visitor at most once per cache entry. 1 if sent. */
-int spds_relay_forward(SpdsRelay *r,unsigned i,uint8_t packet[SPDS_RELAY_SIZE]);
+/* Prepare a forwarding packet; does not mark it sent. */
+int spds_relay_forward(const SpdsRelay *r,unsigned i,uint8_t packet[SPDS_RELAY_SIZE]);
+/* Call only after the wireless driver confirms successful transmission. */
+int spds_relay_mark_forwarded(SpdsRelay *r,unsigned i);
 #endif

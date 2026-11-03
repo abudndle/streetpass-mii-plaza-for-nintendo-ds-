@@ -4,8 +4,7 @@
 #include <string.h>
 int main(void){
     SpdsRecord own={12,1700000000,3,"Alice"},decoded;
-    SpdsRelay r;
-    uint8_t packet[SPDS_RELAY_SIZE],next[SPDS_RELAY_SIZE];
+    SpdsRelay r;uint8_t packet[SPDS_RELAY_SIZE],next[SPDS_RELAY_SIZE];
     unsigned hops;uint32_t at;
     spds_relay_init(&r,24,1);
     assert(spds_relay_encode(packet,&own,2,1700000000));
@@ -13,46 +12,47 @@ int main(void){
     assert(decoded.sender_id==12&&r.received==1);
     assert(spds_relay_accept(&r,packet,sizeof packet,1700000002,&decoded)==0);
     assert(spds_relay_forward(&r,0,next));
-    assert(r.forwarded==1);
-    assert(!spds_relay_forward(&r,0,next)); /* no repeated rebroadcast */
+    /* A failed transmission is not committed; the same packet is retryable. */
+    assert(spds_relay_forward(&r,0,next));
+    assert(r.forwarded==0);
+    assert(spds_relay_mark_forwarded(&r,0));
+    assert(r.forwarded==1&&!spds_relay_forward(&r,0,next));
+    assert(!spds_relay_mark_forwarded(&r,0));
     assert(spds_relay_decode(&decoded,&hops,&at,next,sizeof next));
     assert(hops==1&&at==1700000000);
     SpdsRelay second;spds_relay_init(&second,44,1);
     assert(spds_relay_accept(&second,next,sizeof next,1700000002,&decoded)==1);
     assert(spds_relay_forward(&second,0,next));
+    assert(spds_relay_mark_forwarded(&second,0));
     assert(spds_relay_decode(&decoded,&hops,&at,next,sizeof next)&&hops==0);
     assert(!spds_relay_forward(&second,0,next));
     SpdsRelay third;spds_relay_init(&third,88,1);
     assert(spds_relay_accept(&third,next,sizeof next,1700000003,&decoded)==1);
     assert(!spds_relay_forward(&third,0,next));
-    SpdsRelay chain[5];
-    uint8_t transit[SPDS_RELAY_SIZE],forwarded[SPDS_RELAY_SIZE];
+    SpdsRelay chain[5];uint8_t transit[SPDS_RELAY_SIZE],forwarded[SPDS_RELAY_SIZE];
     assert(spds_relay_encode(transit,&own,SPDS_RELAY_MAX_HOPS,1700000000));
-    for(unsigned i=0;i<5;i++) {
+    for(unsigned i=0;i<5;i++){
         spds_relay_init(&chain[i],100u+i,1);
         assert(spds_relay_accept(&chain[i],transit,sizeof transit,1700000001+i,&decoded)==1);
-        assert(decoded.sender_id==own.sender_id && decoded.nonce==own.nonce);
+        assert(decoded.sender_id==own.sender_id&&decoded.nonce==own.nonce);
         assert(!strcmp(decoded.name,own.name));
         assert(spds_relay_accept(&chain[i],transit,sizeof transit,1700000001+i,&decoded)==0);
-        if(i<4) {
+        if(i<4){
             assert(spds_relay_forward(&chain[i],0,forwarded));
+            assert(spds_relay_mark_forwarded(&chain[i],0));
             assert(!spds_relay_forward(&chain[i],0,forwarded));
             assert(spds_relay_decode(&decoded,&hops,&at,forwarded,sizeof forwarded));
-            assert(hops==SPDS_RELAY_MAX_HOPS-i-1);
-            memcpy(transit,forwarded,sizeof transit);
-        } else assert(!spds_relay_forward(&chain[i],0,forwarded));
+            assert(hops==SPDS_RELAY_MAX_HOPS-i-1);memcpy(transit,forwarded,sizeof transit);
+        }else assert(!spds_relay_forward(&chain[i],0,forwarded));
     }
     assert(!spds_relay_encode(packet,&own,SPDS_RELAY_MAX_HOPS+1,1700000000));
-    SpdsRecord zero={0,1700000000,19,"Invalid"};
-    assert(!spds_relay_encode(packet,&zero,2,1700000000));
+    SpdsRecord zero={0,1700000000,19,"Invalid"};assert(!spds_relay_encode(packet,&zero,2,1700000000));
     assert(spds_relay_encode(packet,&own,2,1700000000));
     assert(spds_relay_accept(&r,packet,sizeof packet,0xffffffffu,&decoded)==-1);
-    packet[13]^=1;
-    assert(spds_relay_accept(&r,packet,sizeof packet,1700000004,&decoded)==-1);
+    packet[13]^=1;assert(spds_relay_accept(&r,packet,sizeof packet,1700000004,&decoded)==-1);
     assert(!spds_relay_decode(&decoded,&hops,&at,packet,sizeof packet-1));
-    spds_relay_init(&r,24,0);
-    assert(spds_relay_accept(&r,next,sizeof next,1700000003,&decoded)==1);
+    spds_relay_init(&r,24,0);assert(spds_relay_accept(&r,next,sizeof next,1700000003,&decoded)==1);
     assert(!spds_relay_forward(&r,0,packet));
-    puts("PASS: relay CRC, duplicate, one-forward-per-visitor, 4-hop cap, identity and opt-in");
+    puts("PASS: relay retry on TX failure, commit on success, dedupe, hop limit and opt-in");
     return 0;
 }
