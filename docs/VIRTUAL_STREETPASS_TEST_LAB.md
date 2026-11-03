@@ -23,3 +23,11 @@ The initial workflow is a **tool installation and startup capture check only**. 
 - Do not claim DS↔3DS interoperability unless a specific adapter/gateway is exercised in both directions.
 - Never upload system files, firmware, encryption keys, private saves, personal Mii data or copyrighted game images as workflow artifacts.
 - Keep screenshots free of account names, console identifiers and personal visitor information.
+
+## Two-instance melonDS boot milestone
+
+The `Two-instance melonDS StreetPass lab` GitHub Actions workflow downloads a validated Plaza ROM and launches **two simultaneously running standalone melonDS processes**, each with a separate `HOME` and `XDG_CONFIG_HOME`. It captures real visible windows, sanitizes PNG metadata, verifies the PNGs and uploads a seven-day artifact. It runs after successful non-scheduled ROM validation and can be manually dispatched. It must not be mistaken for a successful DS Wi-Fi exchange.
+
+**Next radio acceptance gate:** Enable radio explicitly in both test profiles, establish host and client connections, record send and durable ACK on both endpoints, check visitor persistence after reboot, duplicate suppression and the ten-pending-arrival limit. Only accept a result when logs and both emulator displays show the same consenting test encounter. An emulator build that cannot simulate the DS networking mode is a blocked test, not proof of incompatibility with hardware.
+
+NetPass is documentation/reference only and is **not installed or run** as part of this milestone.
