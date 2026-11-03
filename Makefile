@@ -1,5 +1,6 @@
 # ARM9-only BlocksDS ROM; source/protocol and source/storage also compile on host.
 BLOCKSDS ?= /opt/blocksds/core
+BLOCKSDSEXT ?= /opt/blocksds/external
 WONDERFUL_TOOLCHAIN ?= /opt/wonderful
 
 NAME := streetpass-plaza-ds
@@ -9,8 +10,8 @@ GAME_AUTHOR := Independent homebrew
 GAME_ICON := assets/icon.bmp
 NDSTOOL_ARGS += -g SPDS
 SOURCEDIRS := source
-LIBS := -ldswifi9 -lnds9
-LIBDIRS := $(BLOCKSDS)/libs/dswifi
+LIBS := -lNE -ldswifi9 -lnds9
+LIBDIRS := $(BLOCKSDSEXT)/nitro-engine $(BLOCKSDS)/libs/dswifi
 ARM7ELF := $(BLOCKSDS)/sys/arm7/main_core/arm7_dswifi_maxmod.elf
 CFLAGS += -std=gnu11 -Wall -Wextra -Werror
 
