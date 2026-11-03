@@ -1,0 +1,96 @@
+name: Two-instance melonDS StreetPass lab
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Validate DS Plaza"]
+    types: [completed]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: two-melonds-lab
+  cancel-in-progress: false
+jobs:
+  two-instance-boot:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'schedule')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install emulator display tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xdotool imagemagick unzip libfuse2 libegl1 libgl1 libopengl0 libglx0
+      - name: Download and verify melonDS 1.1
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o /tmp/melonds.zip https://github.com/melonDS-emu/melonDS/releases/download/1.1/melonDS-1.1-appimage-x86_64.zip
+          echo "bf377420a2e95f2cd2cdda17d5372b51c2534f858b038db9ec6d129554875124  /tmp/melonds.zip" | sha256sum --check
+          mkdir -p /tmp/melonds
+          unzip -q /tmp/melonds.zip -d /tmp/melonds
+          APPIMAGE="$(find /tmp/melonds -type f -name '*.AppImage' -print -quit)"
+          test -n "$APPIMAGE"
+          chmod +x "$APPIMAGE"
+          (cd /tmp/melonds && "$APPIMAGE" --appimage-extract > /tmp/melonds-extract.log 2>&1)
+          test -x /tmp/melonds/squashfs-root/AppRun
+      - name: Download the matching validated ROM
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p rom
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            gh run download "$SOURCE_RUN_ID" --repo "${{ github.repository }}" --name streetpass-plaza-ds-homebrew --dir rom
+          else
+            gh run download --repo "${{ github.repository }}" --name streetpass-plaza-ds-homebrew --dir rom
+          fi
+          test -s rom/streetpass-plaza-ds.nds
+          python3 tools/verify_nds.py rom/streetpass-plaza-ds.nds
+      - name: Boot two isolated melonDS instances and capture both real windows
+        run: |
+          set -euo pipefail
+          mkdir -p screenshots lab/node-a/home lab/node-b/home
+          xvfb-run -a -s '-screen 0 1440x900x24' bash -euo pipefail -c '
+            export QT_QPA_PLATFORM=xcb
+            export MELONDS_RUN=/tmp/melonds/squashfs-root/AppRun
+            export ROM="$PWD/rom/streetpass-plaza-ds.nds"
+            (export HOME="$PWD/lab/node-a/home"; export XDG_CONFIG_HOME="$HOME/.config"; mkdir -p "$XDG_CONFIG_HOME"; "$MELONDS_RUN" "$ROM" > /tmp/melonds-node-a.log 2>&1) &
+            a=$!
+            sleep 3
+            (export HOME="$PWD/lab/node-b/home"; export XDG_CONFIG_HOME="$HOME/.config"; mkdir -p "$XDG_CONFIG_HOME"; "$MELONDS_RUN" "$ROM" > /tmp/melonds-node-b.log 2>&1) &
+            b=$!
+            trap "kill $a $b 2>/dev/null || true" EXIT
+            sleep 18
+            kill -0 "$a"
+            kill -0 "$b"
+            mapfile -t windows < <(xdotool search --onlyvisible --name "melonDS" | sort -nu)
+            echo "Visible melonDS windows: ${#windows[@]}"
+            if [ "${#windows[@]}" -ne 2 ]; then
+              echo "Expected two actual emulator windows" >&2
+              cat /tmp/melonds-node-a.log /tmp/melonds-node-b.log
+              exit 1
+            fi
+            import -window "${windows[0]}" screenshots/node-a.png
+            import -window "${windows[1]}" screenshots/node-b.png
+          '
+          python3 tools/strip_png_metadata.py screenshots/node-a.png
+          python3 tools/strip_png_metadata.py screenshots/node-b.png
+          python3 tools/check_png.py screenshots/node-a.png
+          python3 tools/check_png.py screenshots/node-b.png
+          {
+            echo "Test: two independent melonDS emulator processes and visible windows"
+            echo "Emulator: official melonDS 1.1 Linux AppImage (SHA-256 pinned)"
+            echo "ROM: validated DS Plaza homebrew"
+            echo "Result scope: concurrent boot only; no radio exchange, CECD or NetPass proven"
+            sha256sum rom/streetpass-plaza-ds.nds
+          } > screenshots/test-evidence.txt
+      - name: Upload sanitized startup evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: two-melonds-streetpass-lab
+          path: screenshots/
+          if-no-files-found: warn
+          retention-days: 7
