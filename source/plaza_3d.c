@@ -4,7 +4,6 @@
 #include <NEMain.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 
 #define SPDS_ROOM_VISITORS 3
 
@@ -148,7 +147,9 @@ void spds_plaza_3d_render(void)
     ++animation_frame;
     for (unsigned i = 0; i < visible_visitors; ++i) {
         float base = (float)i * 1.15f - 1.15f;
-        float sway = sinf((float)(animation_frame + i * 23u) * 0.032f) * 0.18f;
+        unsigned phase = ((animation_frame / 4u) + i * 7u) % 48u;
+        int triangle = phase < 24u ? (int)phase : 47 - (int)phase;
+        float sway = ((float)triangle - 11.5f) * (0.36f / 23.0f);
         float lift = i == selected_visitor ? 0.09f : 0.0f;
         NE_ModelSetCoord(visitor_models[i], base + sway, lift, 0.0f);
     }
