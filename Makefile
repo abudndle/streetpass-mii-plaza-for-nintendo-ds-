@@ -1,5 +1,6 @@
 # ARM9-only BlocksDS ROM; source/protocol and source/storage also compile on host.
 BLOCKSDS ?= /opt/blocksds/core
+BLOCKSDSEXT ?= /opt/wonderful/thirdparty/blocksds/external
 WONDERFUL_TOOLCHAIN ?= /opt/wonderful
 
 NAME := streetpass-plaza-ds
@@ -9,8 +10,8 @@ GAME_AUTHOR := Independent homebrew
 GAME_ICON := assets/icon.bmp
 NDSTOOL_ARGS += -g SPDS
 SOURCEDIRS := source
-LIBS := -ldswifi9 -lnds9
-LIBDIRS := $(BLOCKSDS)/libs/dswifi
+LIBS := -lnflib -lNE -ldswifi9 -lnds9
+LIBDIRS := $(BLOCKSDSEXT)/nflib $(BLOCKSDSEXT)/nitro-engine $(BLOCKSDS)/libs/dswifi
 ARM7ELF := $(BLOCKSDS)/sys/arm7/main_core/arm7_dswifi_maxmod.elf
 CFLAGS += -std=gnu11 -Wall -Wextra -Werror
 
@@ -50,5 +51,7 @@ test:
 	./build-host/test_puzzle_swap
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/streetpass_probe.c tests/test_streetpass_probe.c -o build-host/test_streetpass_probe
 	./build-host/test_streetpass_probe
-	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py tools/index_darc.py
+	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/protocol.c source/storage.c tests/test_storage_restart.c -o build-host/test_storage_restart
+	@set -eu; rm -rf build-host/persistence-fixture; mkdir -p build-host/persistence-fixture; ./build-host/test_storage_restart write build-host/persistence-fixture; ./build-host/test_storage_restart read build-host/persistence-fixture; rm -rf build-host/persistence-fixture
+	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py tools/index_darc.py tools/verify_3ds_tmd.py tools/configure_melonds_dldi.py
 	python3 -m unittest discover -s tests -p 'test_*.py' -v

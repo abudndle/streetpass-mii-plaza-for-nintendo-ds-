@@ -13,6 +13,222 @@
 
 Nintendo ended SpotPass and other 3DS online functionality on **April 8, 2024**. Nintendo's system-update history documents the historical StreetPass relay feature at Nintendo Zone locations; Nintendo's original relay-point design used server-backed store-and-forward. Do not assume that discontinued Nintendo service remains available. A generic Wi-Fi AP, local server or SPDR broadcast is not automatically a native StreetPass relay point.
 
+## Native 3DS protocol findings (research; not an implementation)
+
+The passive parser in `source/streetpass_probe.c` recognizes the public
+continuous-scan probe and the Mii Plaza service identifier
+`00 02 08 00 00`. This is discovery evidence only: it does not establish
+a StreetPass session, authenticate a peer, decrypt traffic, or submit a
+Mii Plaza message to CECD.
+
+The documented native exchange has additional layers:
+
+- 3DS systems advertise enabled StreetPass services in 802.11 probe requests.
+  The Mii Plaza service is identified by `00 02 08 00 00`; service flags
+  describe send/receive mode.
+- After discovery, peers perform a directed wireless handshake and use
+  WPA2/CCMP-protected traffic. The CCMP key is derived by the 3DS CECD
+  service from console identifiers and MAC addresses using platform
+  cryptographic services; merely copying the public probe fields is not
+  sufficient to derive a valid session key on a DS.
+- The encrypted exchange uses the documented SPTCP/SPMTP layers.
+- Mii Plaza's application message is a CECD StreetPass message with a
+  common CECD header and a title-specific payload. It is not the project's
+  64-byte SPDS record or the SPDR relay packet.
+
+Therefore the current DS parser must remain labelled **passive discovery
+only**. A future native interoperability milestone requires reproducible,
+legally obtained test captures from systems the tester owns, a documented
+implementation of the full handshake/encryption and Mii Plaza message
+container, and end-to-end delivery in both directions. Do not add guessed
+key derivation, fabricated console identifiers, or claim CECD delivery
+from a matching beacon.
+
+Research references:
+- 3dbrew, StreetPass protocol and encrypted exchange:
+  https://www.3dbrew.org/wiki/StreetPass
+- 3dbrew, CECD service interface:
+  https://www.3dbrew.org/wiki/CECD_Services
+- 3dbrew, StreetPass Mii Plaza message format:
+  https://www.3dbrew.org/wiki/StreetPass_Mii_Plaza/StreetPass_Message_Format
+- Nintendo support, StreetPass is compatible with Nintendo 3DS software:
+  https://en-americas-support.nintendo.com/app/answers/detail/a_id/404/p/50/c/950
+
+## USA StreetPass Mii Plaza title lock
+
+The 3DS test target is the North American/USA StreetPass Mii Plaza title
+only: title ID `0004001000021800` (region E). Do not substitute the EUR or
+JPN title, Mii Plaza clones, or a custom 3DS companion.
+
+The user's supplied `title.tmd` contains title ID
+`0004001000021800` at the TMD title-ID field, confirming that the metadata
+is for the USA title. The supplied `00000021.app` (16,068,608 bytes) and
+`00000024.app` (671,744 bytes) match the two content sizes listed in the
+provided metadata, but their locally computed SHA-256 digests do not match
+the TMD content hashes. They must therefore be treated as unverified
+content (for example, potentially encrypted or paired with a different
+metadata/content revision), not as a verified installable title.
+
+Known USA title versions include v1027, v2048, v3087, v4096, v5124 and
+v5136. The exact version represented by the user's supplied metadata must
+be established from its parsed TMD fields and content records before
+packaging. Prefer a complete, internally consistent USA title dump; never
+mix content from different title versions or regions.
+
+Validation gates before AzaharPlus installation:
+- Parse and record the TMD title ID, title version, content count, content
+  IDs, indices, sizes, and hashes.
+- Verify every supplied content against its corresponding TMD hash after
+  applying the correct lawful decryption/verification procedure.
+- Require the matching title ticket and all required contents for CIA
+  creation; verify the final CIA's title ID and content table.
+- Keep title contents, tickets, keys, system files, and StreetPass saves
+  private; never commit or upload them to public CI artifacts.
+- Only report the USA title as installed after AzaharPlus lists and boots
+  the actual title.
+
+Reference for USA title ID and known title versions:
+https://yls8.mtheall.com/ninupdates/titlelist.php?reg=E&sys=ctr&tid=0004001000021800
+
+## AzaharPlus emulator test path (ZipPass)
+
+AzaharPlus adds an emulator-side StreetPass workflow named **ZipPass**.
+Its documented desktop flow is available from `File > ZipPass` when no
+game is running. It requires downloaded 3DS system files, enabled LLE
+modules, and StreetPass enabled in the target game. Export produces a
+`.pass.zip` containing StreetPass data for installed games; import
+simulates StreetPass tags in the relevant game's queue. This is a useful
+repeatable 3DS-side test harness, but it is a file-mediated emulator
+workflow, not a live DS Wi-Fi/CECD connection.
+
+Planned test sequence:
+
+1. Install AzaharPlus and download its official system files through the
+   emulator's supported UI. Enable LLE modules.
+2. Install a legally dumped StreetPass Mii Plaza title supplied by the
+   tester; enable StreetPass and boot it far enough to initialize its
+   StreetPass data.
+3. Use AzaharPlus ZipPass to export a baseline `.pass.zip`, then import
+   a second controlled test archive and verify that the original Mii Plaza
+   shows the resulting simulated tag.
+4. In parallel, boot the public-source DS Plaza ROM in melonDS with
+   synthetic, non-personal example Mii fixtures. Verify its own visitor
+   import/export and persistence.
+5. Implement and test a format adapter only after the ZipPass archive
+   structure and CECD message container are validated from owned test data.
+   The DS visitor SPDV/SPDR formats are not ZipPass archives; never rename
+   or wrap them as `.pass.zip` and call them compatible.
+6. Keep three results separate: AzaharPlus ZipPass import/export,
+   melonDS DS visitor import/export, and actual DS-to-3DS conversion. The
+   third remains **NOT RUN** until a validated adapter exists.
+
+The CI workflow can install and launch both emulators and capture their
+first-run screens. It deliberately does not download, redistribute or
+publish the proprietary Mii Plaza title or personal 3DS data. No user-owned
+Mii Plaza title/system files were available as attachments or accessible
+Library files during this run, so title installation and real game testing
+cannot be reported as completed.
+
+AzaharPlus documentation:
+- https://github.com/AzaharPlus/AzaharPlus (ZipPass: File > ZipPass;
+  requires system files, LLE modules and StreetPass enabled)
+- https://github.com/AzaharPlus/AzaharPlus/discussions/117 (ZipPass
+  exchange and examples; community-provided archives are not test fixtures)
+
+## melonDS DLDI storage diagnosis and CI configuration
+
+The emulator screenshot from run 41725974560 shows the DS application
+reporting `Storage: FAT init failed`. This is a concrete emulator
+configuration failure, not evidence of a defect in the SD save-directory
+code: the standalone melonDS invocation previously used a clean profile
+without a DLDI device configured.
+
+Upstream melonDS exposes DLDI settings through its legacy configuration
+keys (`DLDIEnable`, `DLDIReadOnly`, `DLDIFolderSync`,
+`DLDIFolderPath`) and imports them when no TOML config is present.
+The CI workflow now creates a per-run home directory and a writable,
+isolated host folder, then provisions a legacy `melonDS.ini` enabling
+DLDI folder sync before launching the DS ROM. This gives libfat a host
+directory-backed DLDI device without mounting host disks or accessing
+personal SD data.
+
+The helper `tools/configure_melonds_dldi.py` and tests in
+`tests/test_configure_melonds_dldi.py` validate the generated settings
+and ensure all paths remain under the supplied temporary root. The
+emulator screenshot after this configuration must show storage as Ready
+before claiming persistence tests passed. A configured DLDI folder is
+not yet proof that save writes survive emulator restart; that requires a
+write/restart/read test using a synthetic profile and visitor fixture.
+
+Reference: upstream melonDS configuration declares the DLDI enable,
+read-only, folder-sync and folder-path settings in
+https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/Config.cpp
+
+## Native 3DS exchange state machine (research milestone)
+
+The public protocol documentation separates native StreetPass into distinct
+layers. The existing `spds_3ds_probe_classify` implementation only parses
+the first discovery layer; it must not be described as a working native
+connection.
+
+1. **Discovery:** A 3DS broadcasts a probe request using
+   `Nintendo_3DS_continuous_scan_000`. Its Nintendo vendor information
+   advertises enabled five-byte StreetPass service identifiers. Mii Plaza
+   is `00 02 08 00 00`; the service flags indicate send/receive mode.
+2. **Peer response and directed exchange:** A peer may answer with a probe
+   response advertising a channel. The initiating device follows with
+   directed management frames. This is a separate state from simply
+   detecting the broadcast.
+3. **Protected link:** The data exchange uses WPA2/CCMP. The published
+   StreetPass notes describe CECD-derived key material using both peers'
+   StreetPass console IDs and MAC addresses. A DS implementation cannot
+   infer a valid session key from the public service beacon alone.
+4. **SPTCP transport:** The layer-2 transport has magic `0x5959`, constant
+   `0xaddeafbe`, sequence/acknowledgement byte counts, and FIN/SYN/RST/PSH/
+   ACK/END flags. Its documented three-way SYN, SYN+ACK, ACK handshake
+   precedes payload transfer. Segmentation and acknowledgements must be
+   implemented before larger SPMTP messages can be exchanged.
+5. **SPMTP application exchange:** Peers exchange a fixed alternating
+   sequence of information packet types (`41, 42, 43, 43, 11, 12, 21, 22,
+   23, 24, 31, 32, 33, 34, 81, 81`) before title message-box payloads.
+   The message-box turn-taking and FIN close sequence are stateful; simply
+   wrapping a DS visitor record in an SPTCP frame is not compatible.
+6. **CECD/Mii Plaza payload:** Native StreetPass messages use CECD message
+   and slot containers, including message headers, per-title identifiers,
+   timestamps, IDs, body data and integrity fields. The Mii Plaza title
+   payload needs its own validated parser/serializer. The project's SPDS
+   and SPDR formats are not substitutes for these containers.
+
+### Implementation gates derived from the protocol
+
+- Acquire and retain authorized, redacted packet captures from two owned
+  retail 3DS systems completing a successful Mii Plaza encounter. Captures
+  must cover discovery, directed management frames, protected data frames,
+  SPTCP handshake, all SPMTP info packets, message-box exchange and close.
+- Use those captures as golden fixtures for a passive offline dissector.
+  Strip MAC addresses, console IDs, key material, Mii personal data and
+  message bodies before committing fixtures.
+- Implement and host-test SPTCP state/segmentation independently from
+  radio hardware. Reject malformed lengths, invalid flag transitions,
+  duplicate/out-of-window segments and incomplete payloads.
+- Implement SPMTP state sequencing and message-box framing against
+  independently validated fixtures; do not synthesize retail keys or
+  identifiers.
+- Only then evaluate whether the DS wireless hardware and available
+  emulator networking expose the required 802.11 management/data frames and
+  CCMP capabilities. Emulator boot or GUI smoke tests are not evidence of
+  StreetPass transport support.
+- Final acceptance requires bidirectional encounter delivery into the
+  original Mii Plaza on an unmodified retail 3DS, and repeatable tests with
+  an unmodified 3DS emulator running the original title. Until then the
+  native path remains **not implemented / not verified**.
+
+Protocol references:
+- 3dbrew StreetPass discovery, CCMP and CECD message containers:
+  https://3dbrew.org/wiki/StreetPass
+- 3dbrew SPTCP header, flags, handshake, segmentation and close:
+  https://3dbrew.org/wiki/SPTCP
+
 ## Cross-platform boundary
 
 SPDR packets are not CECD records or native 3DS StreetPass frames. Stock 3DS firmware does not understand this DS application protocol. **Automatic DS ↔ unmodified-3DS Mii Plaza delivery is blocked/unproven:** no currently available, supported stock-firmware interface has been demonstrated to deliver arbitrary DS-origin visitors into native Mii Plaza and return native 3DS visitors to this DS app.

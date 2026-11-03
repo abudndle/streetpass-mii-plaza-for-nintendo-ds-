@@ -16,12 +16,14 @@
 #include "plaza_roster.h"
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
+#include "plaza_3d.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
 static SpdsRecord myself;
 static SpdsPollStats last_poll;
 static int storage_ok;
+static const char *storage_status = "Not initialized";
 static unsigned total;
 static unsigned waiting_visitors;
 static SpdsWireless radio;
@@ -142,6 +144,23 @@ static int preview_mii_slot(void) {
     return mii_picker_valid;
 }
 static void draw(void) {
+    /* Nitro Engine owns the top screen in 3D room mode. Keep all text and
+     * controls on the bottom 2D console instead of writing into 3D VRAM. */
+    if(room_open && spds_plaza_3d_active()) {
+        consoleSelect(&bottom_screen);
+        printf("\x1b[2J\x1b[1;2HPLAZA ROOM - 3D");
+        printf("\x1b[3;2HVisitors: %u  Page %u/%u",roster.count,
+               spds_plaza_roster_page(&roster)+1u,spds_plaza_roster_pages(&roster));
+        for(int i=0;i<visitor_count && i<3;i++)
+            printf("\x1b[%d;2H%c %-.24s",5+i*3,
+                   i==(int)room_selected?'>':' ',visitors_on_screen[i].name);
+        if(!visitor_count) printf("\x1b[7;2HNo visitors available");
+        printf("\x1b[16;2HD-Pad: Select visitor");
+        printf("\x1b[17;2HA: Open visitor details");
+        printf("\x1b[19;2HLEFT/RIGHT: Room page");
+        printf("\x1b[21;2HB: Back to Plaza");
+        return;
+    }
     consoleSelect(&top_screen);
     if(mii_picker_open) {
         printf("\x1b[2J\x1b[2;2HMII MAKER GALLERY");
@@ -201,13 +220,13 @@ static void draw(void) {
     printf("\x1b[7;2HMaker Mii: %-20s",mii_loaded?linked_mii.name:"None linked");
     printf("\x1b[8;2HEncounters saved: %u", total);
     printf("\x1b[9;2HWaiting queue: %u/10",waiting_visitors);
-    printf("\x1b[10;2HCached Mii visitors: %u",roster.count);
+    printf("\x1b[17;2HCached Mii visitors: %u",roster.count);
     printf("\x1b[10;2HLocal radio: %-14s", radio_status());
     printf("\x1b[11;2HAuto scan: %s",auto_radio?"Enabled":"Disabled");
     printf("\x1b[12;2HLid search: %-14s",
            sleep_override?"EXPERIMENTAL":"Off");
     printf("\x1b[13;2H3DS: no native CECD link");
-    printf("\x1b[14;2HBackground: menu process only");
+    printf("\x1b[14;2HStorage: %-22.22s",storage_status);
     printf("\x1b[15;2HRaw %u 3DS %u Plaza %u",radio.probe_frames,radio.probe_hits,radio.plaza_probe_hits);
     if(puzzle_ready) printf("\x1b[21;2HPuzzle pieces: %u/%u",
                            spds_puzzle_completed(&puzzle),SPDS_PUZZLE_PIECES);
@@ -325,12 +344,18 @@ int main(void) {
     memset(&myself, 0, sizeof(myself));
     strcpy(myself.name, "DS Traveler");
     const char *drive = NULL;
-    if (fatInitDefault()) drive = fatGetDefaultDrive();
-    if (drive && snprintf(save_dir, sizeof(save_dir),
-                          "%sstreetpass-plaza", drive) <
-                     (int)sizeof(save_dir) &&
-        spds_storage_init(save_dir) == 0) {
+    if (fatInitDefault()) {
+        drive = fatGetDefaultDrive();
+        storage_status = drive ? "FAT mounted" : "No default FAT drive";
+    } else {
+        storage_status = "FAT init failed";
+    }
+    int save_path_ok = drive &&
+        snprintf(save_dir, sizeof(save_dir), "%sstreetpass-plaza", drive) <
+            (int)sizeof(save_dir);
+    if (save_path_ok && spds_storage_init(save_dir) == 0) {
         storage_ok = 1;
+        storage_status = "Ready";
         if (spds_storage_load_profile(save_dir, &myself) != 0) {
             /* Local identity is random best-effort, not cryptographic. */
             unsigned seed = (unsigned)time(NULL) ^ (unsigned)REG_VCOUNT;
@@ -346,6 +371,10 @@ int main(void) {
         if(spds_puzzle_load(save_dir,&puzzle)>=0) puzzle_ready=1;
         else puzzle_ready=0; /* Never overwrite a corrupt existing save. */
         poll_now();
+    } else if (drive && !save_path_ok) {
+        storage_status = "Save path too long";
+    } else if (drive) {
+        storage_status = "SD directory error";
     }
     spds_relay_init(&relay,myself.sender_id,1);
     spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,(uint32_t)time(NULL));
@@ -355,6 +384,7 @@ int main(void) {
         swiWaitForVBlank();
         scanKeys();
         unsigned down = keysDown();
+        if(room_open && spds_plaza_3d_active()) spds_plaza_3d_render();
         if(room_open && (++room_anim_frame%12u)==0u) draw();
         if(mii_picker_open) {
             if(down & KEY_B) { mii_picker_open=0; draw(); continue; }
@@ -413,7 +443,14 @@ int main(void) {
             if(changed) draw();
         }
         if(room_open) {
-            if(down & KEY_B) {room_open=0;roster_open=1;draw();continue;}
+            if(down & KEY_B) {
+                if(spds_plaza_3d_active()) {
+                    spds_plaza_3d_leave();
+                    consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
+                                31, 0, true, true);
+                }
+                room_open=0;roster_open=1;draw();continue;
+            }
             if(down & (KEY_LEFT|KEY_RIGHT)) {
                 spds_plaza_roster_change_page(&roster,(down & KEY_LEFT)?-1:1);
                 room_selected=0;
@@ -446,7 +483,11 @@ int main(void) {
         }
         if(roster_open && (down & KEY_START)) {
             if(spds_storage_queue_clear(save_dir)==0) waiting_visitors=0;
-            room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;draw();continue;
+            room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;
+            if(storage_ok && !spds_plaza_3d_enter(save_dir))
+                consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
+                            31, 0, true, true);
+            draw();continue;
         }
         if(roster_open && (down & KEY_Y)) {
             puzzle_open=1;
@@ -585,6 +626,7 @@ int main(void) {
             draw();
         }
     }
+    if(spds_plaza_3d_active()) spds_plaza_3d_leave();
     spds_wifi_stop(&radio);
     if(sleep_override) enableSleep();
     return 0;

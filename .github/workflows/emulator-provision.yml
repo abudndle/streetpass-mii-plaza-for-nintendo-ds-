@@ -1,0 +1,306 @@
+name: Emulator provisioning diagnostic
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/emulator-provision.yml'
+      - 'tools/emulator_preflight.py'
+      - 'tools/configure_melonds_dldi.py'
+      - 'source/main.c'
+      - 'source/plaza_3d.c'
+      - 'source/plaza_3d.h'
+      - 'Makefile'
+      - 'tests/test_storage_restart.c'
+  push:
+    branches: [main, 'dev/**', 'feature/**']
+    paths:
+      - '.github/workflows/emulator-provision.yml'
+      - 'tools/emulator_preflight.py'
+      - 'tools/configure_melonds_dldi.py'
+      - 'source/main.c'
+      - 'source/plaza_3d.c'
+      - 'source/plaza_3d.h'
+      - 'Makefile'
+      - 'tests/test_storage_restart.c'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emulator-provision-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-homebrew:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: skylyrac/blocksds:slim-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nitro Engine and DSMA BlocksDS package
+        run: |
+          set -eu
+          wf-pacman -Sy --noconfirm blocksds-nitroengine blocksds-nflib
+          wf-pacman -Ql blocksds-nitroengine
+          ne_header=$(find /opt/wonderful/thirdparty/blocksds/external -type f -name NEMain.h -print -quit)
+          ne_root=$(dirname "$(dirname "$ne_header")")
+          test -n "$ne_header"
+          test -s "$ne_root/lib/libNE.a"
+          echo "BLOCKSDSEXT=$(dirname "$ne_root")" >> "$GITHUB_ENV"
+          echo "Nitro Engine header: $ne_header"
+          echo "Nitro Engine root: $ne_root"
+          nf_header=$(find /opt/wonderful/thirdparty/blocksds/external -type f -iname "nf_lib.h" -print -quit)
+          test -n "$nf_header"
+          nf_root=$(dirname "$(dirname "$nf_header")")
+          test -s "$nf_root/lib/libnflib.a"
+          echo "NightFox\047s Lib root: $nf_root"
+      - name: Build public-source homebrew DS ROM
+        run: make
+      - name: Verify homebrew ROM exists in BlocksDS container
+        run: test -s streetpass-plaza-ds.nds
+      - name: Upload homebrew ROM for emulator boot probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-smoke-homebrew
+          path: streetpass-plaza-ds.nds
+          if-no-files-found: error
+          retention-days: 1
+
+  emulator-provision:
+    needs: build-homebrew
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Linux package index
+        run: sudo apt-get update
+      - name: Install AppImage runtime libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Bound apt installation so a stalled package operation cannot hide
+          # emulator/screenshot regressions behind a long-running CI step.
+          timeout --signal=TERM --kill-after=15s 240s sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 libegl1 libgl1 libopengl0 libfuse2t64 libxcb-cursor0 xvfb xauth imagemagick tesseract-ocr
+      - name: Attempt distro melonDS and AzaharPlus installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          for package in melonds azaharplus azahar; do
+            if apt-cache show "$package" >/dev/null 2>&1; then
+              echo "Installing available emulator package: $package"
+              sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$package"
+            else
+              echo "Package $package unavailable in this runner's Ubuntu apt repositories"
+            fi
+          done
+          echo 'Unavailable packages remain BLOCKED, not installed or tested'
+      - name: Download official Linux AppImages if distro packages are unavailable
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/emulators"
+          for spec in 'melonDS:melonDS-emu/melonDS' 'AzaharPlus:AzaharPlus/AzaharPlus'; do
+            name="${spec%%:*}"
+            repository="${spec#*:}"
+            if [[ "$name" == 'melonDS' ]] && { command -v melonDS >/dev/null || command -v melonds >/dev/null; }; then continue; fi
+            if [[ "$name" == 'AzaharPlus' ]] && { command -v azaharplus >/dev/null || command -v azahar >/dev/null; }; then continue; fi
+            echo "Inspecting official upstream release for $name ($repository)"
+            api="https://api.github.com/repos/$repository/releases/latest"
+            metadata="$(curl --fail --location --silent --show-error --retry 3 --max-time 30 "$api")"
+            tag="$(jq -r '.tag_name // empty' <<<"$metadata")"
+            echo "Official release $repository tag=$tag available assets:"
+            jq -r '.assets[]?.name' <<<"$metadata" | sed 's/^/  /'
+            if [[ "$name" == 'AzaharPlus' && "$tag" != 'AZAHAR_PLUS_2126_2_A' ]]; then
+              echo "::warning::AzaharPlus tag $tag has not been security-reviewed for this workflow; skipping"
+              continue
+            fi
+            if [[ "$name" == 'melonDS' ]]; then
+              asset="$(jq -r '[.assets[] | select(.name | endswith("appimage-x86_64.zip"))] | first | .browser_download_url // empty' <<<"$metadata")"
+            else
+              asset="$(jq -r '[.assets[] | select(.name | endswith("-linux.AppImage"))] | first | .browser_download_url // empty' <<<"$metadata")"
+            fi
+            if [[ -z "$asset" ]]; then
+              echo "::warning::No supported Linux artifact published for $name release $tag"
+              continue
+            fi
+            dest="$RUNNER_TEMP/emulators/$name.download"
+            curl --fail --location --silent --show-error --retry 3 --max-time 180 --output "$dest" "$asset"
+            test -s "$dest"
+            sha256sum "$dest"
+            if [[ "$name" == 'melonDS' ]]; then
+              mkdir -p "$RUNNER_TEMP/emulators/melonds-unpacked"
+              unzip -q "$dest" -d "$RUNNER_TEMP/emulators/melonds-unpacked"
+              find "$RUNNER_TEMP/emulators/melonds-unpacked" -maxdepth 4 -type f -print
+              appimage="$(find "$RUNNER_TEMP/emulators/melonds-unpacked" -type f -iname '*.AppImage' -print -quit)"
+              if [[ -z "$appimage" ]]; then echo "::error::melonDS ZIP contains no AppImage"; exit 1; fi
+              chmod +x "$appimage"
+              ln -s "$appimage" "$RUNNER_TEMP/emulators/melonDS"
+            else
+              chmod +x "$dest"
+              ln -s "$dest" "$RUNNER_TEMP/emulators/azaharplus"
+            fi
+            echo "$name official release downloaded, SHA-256 recorded"
+
+          done
+          echo "$RUNNER_TEMP/emulators" >> "$GITHUB_PATH"
+      - name: Report emulator availability without claiming StreetPass
+        run: |
+          python3 tools/emulator_preflight.py --json | tee emulator-preflight.json
+          python3 - <<'PY'
+          import json
+          with open('emulator-preflight.json', encoding='utf-8') as f:
+              result = json.load(f)
+          expected = {'melonDS_to_melonDS', 'AzaharPlus_to_AzaharPlus_CECD', 'AzaharPlus_to_melonDS'}
+          assert set(result['tests']) == expected
+          assert all(value == 'NOT_RUN' for value in result['tests'].values())
+          print('Emulator executable availability checked. No StreetPass exchange attempted.')
+          PY
+      - name: Download self-built DS homebrew ROM
+        uses: actions/download-artifact@v4
+        with:
+          name: emulator-smoke-homebrew
+          path: ${{ runner.temp }}/homebrew
+      - name: Provision writable DLDI folder for melonDS
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HOME="$RUNNER_TEMP/melonds-home"
+          python3 tools/configure_melonds_dldi.py --home "$HOME" --sd-folder "$RUNNER_TEMP/melonds-dldi-sd"
+          echo "HOME=$HOME" >> "$GITHUB_ENV"
+          test -f "$HOME/.config/melonDS/melonDS.ini"
+          grep -E '^DLDI(Enable|ReadOnly|FolderSync|FolderPath)=' "$HOME/.config/melonDS/melonDS.ini"
+      - name: Headless melonDS ROM boot smoke probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          rom="$RUNNER_TEMP/homebrew/streetpass-plaza-ds.nds"
+          python3 tools/verify_nds.py "$rom"
+          set +e
+          timeout 15s xvfb-run -a melonDS "$rom" > "$RUNNER_TEMP/melonds-rom-boot.log" 2>&1
+          status=$?
+          set -e
+          sed -n '1,60p' "$RUNNER_TEMP/melonds-rom-boot.log"
+          if [[ "$status" -eq 124 ]]; then
+            echo "melonDS stayed active with homebrew ROM argument for 15 seconds; gameplay not confirmed"
+          elif [[ "$status" -eq 0 ]]; then
+            echo "melonDS exited normally with ROM argument; gameplay not confirmed"
+          else
+            echo "::error::melonDS ROM boot probe exited with $status"
+            exit 1
+          fi
+      - name: Capture melonDS homebrew ROM display
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p emulator-screenshots
+          export ROM_PATH="$RUNNER_TEMP/homebrew/streetpass-plaza-ds.nds"
+          xvfb-run -a -s '-screen 0 1024x768x24' bash -c '
+            set -euo pipefail
+            melonDS "$ROM_PATH" > "$RUNNER_TEMP/melonds-screenshot.log" 2>&1 &
+            emulator_pid=$!
+            trap "kill $emulator_pid 2>/dev/null || true" EXIT
+            sleep 7
+            if ! kill -0 "$emulator_pid" 2>/dev/null; then
+              cat "$RUNNER_TEMP/melonds-screenshot.log"
+              echo "melonDS exited before screenshot capture" >&2
+              exit 1
+            fi
+            import -display "$DISPLAY" -window root emulator-screenshots/melonds-homebrew.png
+          '
+          test -s emulator-screenshots/melonds-homebrew.png
+          identify emulator-screenshots/melonds-homebrew.png
+          echo "Screenshot captured; running OCR on DS storage diagnostic"
+          tesseract emulator-screenshots/melonds-homebrew.png "$RUNNER_TEMP/melonds-screen" 2>/dev/null
+          cat "$RUNNER_TEMP/melonds-screen.txt"
+          if grep -Eqi 'Storage:[[:space:]]*Ready' "$RUNNER_TEMP/melonds-screen.txt"; then
+            echo "PASS: melonDS DS application reports writable storage ready"
+          elif grep -Eqi 'Storage:[[:space:]]*FAT init failed' "$RUNNER_TEMP/melonds-screen.txt"; then
+            echo "::error::melonDS DLDI folder-sync was not mounted; DS app reports FAT init failed"
+            exit 1
+          else
+            echo "::error::Could not confirm DS storage state from emulator screenshot"
+            exit 1
+          fi
+      - name: Upload melonDS screen capture for visual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: melonds-homebrew-screen
+          path: emulator-screenshots/melonds-homebrew.png
+          if-no-files-found: error
+          retention-days: 7
+      - name: Capture AzaharPlus first-run display
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p emulator-screenshots
+          xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
+            set -euo pipefail
+            azaharplus > "$RUNNER_TEMP/azaharplus-screenshot.log" 2>&1 &
+            emulator_pid=$!
+            trap "kill $emulator_pid 2>/dev/null || true" EXIT
+            sleep 10
+            if ! kill -0 "$emulator_pid" 2>/dev/null; then
+              cat "$RUNNER_TEMP/azaharplus-screenshot.log"
+              echo "AzaharPlus exited before screenshot capture" >&2
+              exit 1
+            fi
+            import -display "$DISPLAY" -window root emulator-screenshots/azaharplus-first-run.png
+          '
+          test -s emulator-screenshots/azaharplus-first-run.png
+          identify emulator-screenshots/azaharplus-first-run.png
+          echo "AzaharPlus first-run UI captured. No title or system files were installed."
+      - name: Upload AzaharPlus screen capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: azaharplus-first-run-screen
+          path: emulator-screenshots/azaharplus-first-run.png
+          if-no-files-found: error
+          retention-days: 7
+      - name: Headless GUI launch smoke tests (no ROM or system files)
+        shell: bash
+        run: |
+          set +e
+          for binary in melonDS azaharplus; do
+            echo "Launching $binary under Xvfb for at most 10 seconds"
+            timeout 10s xvfb-run -a "$binary" > "$RUNNER_TEMP/$binary-launch.log" 2>&1
+            code=$?
+            sed -n '1,30p' "$RUNNER_TEMP/$binary-launch.log"
+            if [[ "$code" -eq 124 ]]; then
+              echo "$binary remained running until smoke-test timeout (GUI launch candidate)"
+            elif [[ "$code" -eq 0 ]]; then
+              echo "$binary exited normally (GUI launch candidate)"
+            else
+              echo "::error::$binary exited with code $code; GUI launch NOT verified"
+              exit 1
+            fi
+          done
+          echo "No ROM, 3DS system files or StreetPass exchanges were used"
+      - name: Summarize installation status and fail unmet milestone
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = Path('emulator-preflight.json')
+          if not report.is_file():
+              raise SystemExit('No emulator preflight report produced')
+          data = json.loads(report.read_text(encoding='utf-8'))
+          with open(__import__('os').environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write('## Emulator installation readiness\\n\\n')
+              for name, result in data['emulators'].items():
+                  summary.write(f"- {name}: **{'INSTALLED' if result['installed'] else 'BLOCKED'}**\\n")
+              summary.write('\\nNo StreetPass exchange was performed.\\n')
+          missing = [name for name, result in data['emulators'].items() if not result['installed']]
+          if missing:
+              raise SystemExit('Required emulator executables missing: ' + ', '.join(missing))
+          PY
+      - name: Upload sanitized diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-provision-preflight
+          path: emulator-preflight.json
+          if-no-files-found: error
+          retention-days: 7

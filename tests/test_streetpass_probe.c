@@ -68,6 +68,20 @@ int main(void){
  /* A truncated service list also must not advertise Plaza. */
  frame[81u]=4u;
  assert(spds_3ds_probe_classify(frame,n)==0u);
- puts("PASS: anonymized 3DS probe frame, FCS/radiotap, multiple services and flags");
+ /* Native 3DS service discovery must not mistake unrelated Nintendo
+  * services for StreetPass Mii Plaza, even with a valid FCS. */
+ n=make_frame(frame,0);
+ frame[82u]=0x00u;frame[83u]=0x03u;frame[84u]=0x58u;
+ assert(spds_3ds_probe_classify(frame,n)==SPDS_3DS_PROBE_STREETPASS);
+ put_fcs(frame,n);
+ assert(spds_3ds_probe_classify(frame,n+4u)==SPDS_3DS_PROBE_STREETPASS);
+ /* A malformed SSID or vendor OUI is not proof of native StreetPass. */
+ n=make_frame(frame,0);
+ frame[26u]='X';
+ assert(spds_3ds_probe_classify(frame,n)==0u);
+ n=make_frame(frame,0);
+ frame[77u]^=0x01u;
+ assert(spds_3ds_probe_classify(frame,n)==0u);
+ puts("PASS: anonymized 3DS probe frame, FCS/radiotap, native service discrimination and flags");
  return 0;
 }
