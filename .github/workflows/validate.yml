@@ -24,6 +24,21 @@ jobs:
         run: make test
       - name: Emulator diagnostics regression tests
         run: python3 -m unittest discover -s tests -p 'test_emulator_preflight.py' -v
+      - name: Run emulator preflight and enforce truthful exchange statuses
+        run: |
+          python3 tools/emulator_preflight.py --json > emulator-preflight.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('emulator-preflight.json').read_text())
+          assert set(report['emulators']) == {'melonDS', 'AzaharPlus'}
+          assert report['tests'] == {
+              'melonDS_to_melonDS': 'NOT_RUN',
+              'AzaharPlus_to_AzaharPlus_CECD': 'NOT_RUN',
+              'AzaharPlus_to_melonDS': 'NOT_RUN',
+          }, 'Preflight must never report unperformed radio exchange as passed'
+          print('Emulator preflight completed; all actual radio exchange tests NOT_RUN')
+          PY
       - name: Verify proprietary files are absent
         run: |
           python3 - <<'PY'
