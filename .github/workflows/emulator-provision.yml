@@ -18,6 +18,8 @@ on:
       - 'tools/emulator_preflight.py'
       - 'tools/configure_melonds_dldi.py'
       - 'source/main.c'
+      - 'source/plaza_3d.c'
+      - 'source/plaza_3d.h'
       - 'Makefile'
       - 'tests/test_storage_restart.c'
 
