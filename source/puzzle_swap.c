@@ -79,13 +79,15 @@ int spds_puzzle_load(const char *base,SpdsPuzzle *s) {
     int failed=ferror(f);
     if(fclose(f)!=0) failed=1;
     if(failed || n!=sizeof(bytes) || extra!=EOF ||
-       memcmp(bytes,"SPZP",4)!=0 || bytes[4]!=1 ||
-       bytes[5]!=0 || bytes[6]!=0 || bytes[7]!=0 ||
+       memcmp(bytes,"SPZP",4)!=0 || (bytes[4]!=1 && bytes[4]!=2) ||
+       (bytes[4]==1 ? bytes[5]!=0 : bytes[5]>=SPDS_PUZZLE_PIECES) ||
+       bytes[6]!=0 || bytes[7]!=0 ||
        get32(bytes+16)!=spds_crc32(bytes,16)) return -1;
     SpdsPuzzle candidate;
     spds_puzzle_init(&candidate);
     candidate.pieces=get32(bytes+8);
     candidate.credited_encounters=get32(bytes+12);
+    candidate.selected=bytes[4]==2 ? bytes[5] : 0u;
     if(!valid(&candidate)) return -1;
     *s=candidate;
     return 1;
@@ -96,7 +98,8 @@ int spds_puzzle_save(const char *base,const SpdsPuzzle *s) {
        !path(temp,base,"puzzle.tmp")) return -1;
     uint8_t bytes[SPDS_PUZZLE_FILE_SIZE]={0};
     memcpy(bytes,"SPZP",4);
-    bytes[4]=1;
+    bytes[4]=2;
+    bytes[5]=(uint8_t)s->selected;
     put32(bytes+8,s->pieces);
     put32(bytes+12,s->credited_encounters);
     put32(bytes+16,spds_crc32(bytes,16));
