@@ -25,15 +25,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prepare Linux package index
         run: sudo apt-get update
-      - name: Attempt distro melonDS installation
+      - name: Attempt distro melonDS and AzaharPlus installation
         shell: bash
         run: |
           set -euo pipefail
-          if apt-cache show melonds >/dev/null 2>&1; then
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y melonds
-          else
-            echo 'melonDS not offered by this Ubuntu runner package index'
-          fi
+          for package in melonds azaharplus azahar; do
+            if apt-cache show "$package" >/dev/null 2>&1; then
+              echo "Installing available emulator package: $package"
+              sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$package"
+            else
+              echo "Package $package unavailable in this runner's Ubuntu apt repositories"
+            fi
+          done
+          echo 'Unavailable packages remain BLOCKED, not installed or tested'
       - name: Report emulator availability without claiming StreetPass
         run: |
           python3 tools/emulator_preflight.py --json | tee emulator-preflight.json
