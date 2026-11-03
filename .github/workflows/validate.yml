@@ -48,8 +48,6 @@ jobs:
         run: make
       - name: Validate output exists and is not empty
         run: test -s streetpass-plaza-ds.nds
-      - name: Validate NDS header and ARM executable bounds
-        run: python3 tools/verify_nds.py streetpass-plaza-ds.nds
       - name: Upload homebrew ROM only
         uses: actions/upload-artifact@v4
         with:
@@ -57,3 +55,17 @@ jobs:
           path: streetpass-plaza-ds.nds
           if-no-files-found: error
           retention-days: 7
+
+  rom-header-validation:
+    if: github.event_name != 'schedule'
+    needs: rom-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download compiled homebrew ROM
+        uses: actions/download-artifact@v4
+        with:
+          name: streetpass-plaza-ds-homebrew
+      - name: Validate NDS header and ARM executable bounds
+        run: python3 tools/verify_nds.py streetpass-plaza-ds.nds
