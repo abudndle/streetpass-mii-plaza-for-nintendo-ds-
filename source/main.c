@@ -16,6 +16,7 @@
 #include "plaza_roster.h"
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
+#include "plaza_3d.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -366,6 +367,7 @@ int main(void) {
         swiWaitForVBlank();
         scanKeys();
         unsigned down = keysDown();
+        if(room_open && spds_plaza_3d_active()) spds_plaza_3d_render();
         if(room_open && (++room_anim_frame%12u)==0u) draw();
         if(mii_picker_open) {
             if(down & KEY_B) { mii_picker_open=0; draw(); continue; }
@@ -424,7 +426,14 @@ int main(void) {
             if(changed) draw();
         }
         if(room_open) {
-            if(down & KEY_B) {room_open=0;roster_open=1;draw();continue;}
+            if(down & KEY_B) {
+                if(spds_plaza_3d_active()) {
+                    spds_plaza_3d_leave();
+                    consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
+                                31, 0, true, true);
+                }
+                room_open=0;roster_open=1;draw();continue;
+            }
             if(down & (KEY_LEFT|KEY_RIGHT)) {
                 spds_plaza_roster_change_page(&roster,(down & KEY_LEFT)?-1:1);
                 room_selected=0;
@@ -457,7 +466,9 @@ int main(void) {
         }
         if(roster_open && (down & KEY_START)) {
             if(spds_storage_queue_clear(save_dir)==0) waiting_visitors=0;
-            room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;draw();continue;
+            room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;
+            if(storage_ok) spds_plaza_3d_enter(save_dir);
+            draw();continue;
         }
         if(roster_open && (down & KEY_Y)) {
             puzzle_open=1;
@@ -596,6 +607,7 @@ int main(void) {
             draw();
         }
     }
+    if(spds_plaza_3d_active()) spds_plaza_3d_leave();
     spds_wifi_stop(&radio);
     if(sleep_override) enableSleep();
     return 0;
