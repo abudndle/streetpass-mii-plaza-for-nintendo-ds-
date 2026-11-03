@@ -177,8 +177,19 @@ int spds_visitor_poll(const char *base,uint64_t own_id,uint32_t now,
         int accepted=spds_storage_receive(base,&profile,own_id,now);
         if(accepted<0) { stats->io_errors++; continue; }
         if(accepted==SPDS_STORAGE_QUEUE_FULL) { stats->queue_full++; continue; }
-        if(accepted==0) stats->duplicates++;
-        else if(!save_received(base,&profile,&avatar)) {
+        if(accepted==0) {
+            /* An encounter may already be in the log even though its Mii
+             * cache write failed or was lost. Recover that appearance from
+             * the still-validated inbox bundle before consuming it. Never
+             * overwrite an existing cached visitor on a duplicate. */
+            SpdsMii cached;
+            if(!spds_visitor_read(base,profile.sender_id,&cached) &&
+               !save_received(base,&profile,&avatar)) {
+                stats->io_errors++;
+                continue; /* Keep the bundle available for another retry. */
+            }
+            stats->duplicates++;
+        } else if(!save_received(base,&profile,&avatar)) {
             /* Log written, retry could be considered duplicate: report error
              * and preserve file for explicit/manual recovery. */
             stats->io_errors++;
