@@ -55,6 +55,19 @@ int main(void){
  /* Changing the Nintendo OUI removes the advertised-service identity. */
  size_t vendor_start=n-26u;frame[vendor_start+2u]^=1u;
  assert(!spds_3ds_probe_classify(frame,n));
+ /* A six-byte service payload with the Plaza prefix and an extra byte
+  * must not be accepted as a complete five-byte Plaza service. */
+ n=make_frame(frame,0);
+ assert(n==97u);
+ memmove(frame+88u,frame+87u,n-87u);
+ frame[87u]=0x99u;
+ frame[75u]++; /* Nintendo vendor IE length: 21 -> 22 */
+ frame[81u]++; /* Service-list payload length: 5 -> 6 */
+ n++;
+ assert(spds_3ds_probe_classify(frame,n)==SPDS_3DS_PROBE_STREETPASS);
+ /* A truncated service list also must not advertise Plaza. */
+ frame[81u]=4u;
+ assert(spds_3ds_probe_classify(frame,n)==0u);
  puts("PASS: anonymized 3DS probe frame, FCS/radiotap, multiple services and flags");
  return 0;
 }
