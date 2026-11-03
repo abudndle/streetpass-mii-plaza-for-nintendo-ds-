@@ -17,7 +17,6 @@
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
 #include "plaza_3d.h"
-#include "dsi_camera.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -590,15 +589,6 @@ int main(void) {
             } else ++last_poll.invalid;
             draw();
         } else if(radio_event==2 || radio_event==3) draw();
-        if (!roster_open && !puzzle_open &&
-            (down & KEY_L) && (down & KEY_Y)) {
-            int camera_result=spds_dsi_camera_run(save_dir);
-            consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
-                        31, 0, true, true);
-            if(camera_result<0) last_poll.io_errors++;
-            draw();
-            continue;
-        }
         if (!roster_open && !puzzle_open && (down & KEY_Y)) {
             mii_picker_slot=mii_loaded && linked_mii.from_gallery?linked_mii.slot:0u;
             mii_picker_open=1;
