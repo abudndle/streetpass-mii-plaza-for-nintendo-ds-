@@ -18,7 +18,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  build-homebrew:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: skylyrac/blocksds:slim-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build public-source homebrew DS ROM
+        run: make
+      - name: Verify DS ROM header
+        run: python3 tools/verify_nds.py streetpass-plaza-ds.nds
+      - name: Upload homebrew ROM for emulator boot probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-smoke-homebrew
+          path: streetpass-plaza-ds.nds
+          if-no-files-found: error
+          retention-days: 1
+
   emulator-provision:
+    needs: build-homebrew
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -101,6 +121,30 @@ jobs:
           assert all(value == 'NOT_RUN' for value in result['tests'].values())
           print('Emulator executable availability checked. No StreetPass exchange attempted.')
           PY
+      - name: Download self-built DS homebrew ROM
+        uses: actions/download-artifact@v4
+        with:
+          name: emulator-smoke-homebrew
+          path: ${{ runner.temp }}/homebrew
+      - name: Headless melonDS ROM boot smoke probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          rom="$RUNNER_TEMP/homebrew/streetpass-plaza-ds.nds"
+          python3 tools/verify_nds.py "$rom"
+          set +e
+          timeout 15s xvfb-run -a melonDS "$rom" > "$RUNNER_TEMP/melonds-rom-boot.log" 2>&1
+          status=$?
+          set -e
+          sed -n '1,60p' "$RUNNER_TEMP/melonds-rom-boot.log"
+          if [[ "$status" -eq 124 ]]; then
+            echo "melonDS stayed active with homebrew ROM argument for 15 seconds; gameplay not confirmed"
+          elif [[ "$status" -eq 0 ]]; then
+            echo "melonDS exited normally with ROM argument; gameplay not confirmed"
+          else
+            echo "::error::melonDS ROM boot probe exited with $status"
+            exit 1
+          fi
       - name: Headless GUI launch smoke tests (no ROM or system files)
         shell: bash
         run: |
