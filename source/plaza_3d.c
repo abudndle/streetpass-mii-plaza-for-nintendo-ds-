@@ -12,7 +12,6 @@ static NE_Model *visitor_models[SPDS_ROOM_VISITORS];
 static NE_Animation *visitor_idle;
 static int renderer_active;
 static unsigned visible_visitors;
-static unsigned visible_visitors;
 static unsigned selected_visitor;
 static unsigned animation_frame;
 
