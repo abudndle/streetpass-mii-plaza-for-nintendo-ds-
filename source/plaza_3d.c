@@ -1,4 +1,5 @@
 #include "plaza_3d.h"
+#include "storage.h"
 
 #include <NEMain.h>
 #include <stdio.h>
@@ -111,7 +112,7 @@ void spds_plaza_3d_render(void)
     if (!renderer_active)
         return;
 
-    NE_WaitForVBL(NE_UPDATE_ANIMATIONS);
+    NE_ModelAnimateAll();
     NE_ProcessArg(draw_room, NULL);
 }
 
