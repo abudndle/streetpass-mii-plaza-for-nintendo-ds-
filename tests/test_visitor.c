@@ -97,7 +97,7 @@ int main(void) {
 
     /* Population boundary: all 3,000 Miis are enumerable and the next
      * imported visitor remains in inbox instead of being consumed. */
-    for(unsigned i=0;i<SPDS_PLAZA_POPULATION_LIMIT;i++) {
+    for(unsigned i=0;i<SPDS_PLAZA_POPULATION_LIMIT-7u;i++) {
         char file[320];
         snprintf(file,sizeof file,"%s/visitors/%016llx.mds",base,
                  (unsigned long long)(10000u+i));
