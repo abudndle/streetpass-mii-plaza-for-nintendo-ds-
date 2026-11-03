@@ -4,6 +4,8 @@
 #include <stdint.h>
 #define SPDS_PATH_MAX 256u
 #define SPDS_COOLDOWN_SECONDS 28800u
+#define SPDS_VISITOR_QUEUE_LIMIT 10u
+#define SPDS_STORAGE_QUEUE_FULL 2
 
 typedef struct {
     unsigned accepted;
@@ -23,5 +25,7 @@ int spds_storage_poll(const char *base, uint64_t own_id,
 int spds_storage_receive(const char *base, const SpdsRecord *record,
                          uint64_t own_id, uint32_t received_at);
 int spds_storage_total(const char *base, unsigned *total);
+int spds_storage_queue_count(const char *base,unsigned *count);
+int spds_storage_queue_clear(const char *base);
 
 #endif

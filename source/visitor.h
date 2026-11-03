@@ -12,6 +12,7 @@ typedef struct {
     unsigned duplicates;
     unsigned invalid;
     unsigned io_errors;
+    unsigned queue_full;
 } SpdsVisitorStats;
 
 /* Only shareable Mii profiles are valid for an outbound bundle. */

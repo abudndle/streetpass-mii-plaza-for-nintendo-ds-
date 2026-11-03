@@ -23,6 +23,7 @@ static SpdsRecord myself;
 static SpdsPollStats last_poll;
 static int storage_ok;
 static unsigned total;
+static unsigned waiting_visitors;
 static SpdsWireless radio;
 static SpdsServiceConfig service_cfg;
 static SpdsMii linked_mii;
@@ -198,6 +199,7 @@ static void draw(void) {
     printf("\x1b[6;2HVisitor: %-20s", myself.name);
     printf("\x1b[7;2HMaker Mii: %-20s",mii_loaded?linked_mii.name:"None linked");
     printf("\x1b[8;2HEncounters saved: %u", total);
+    printf("\x1b[9;2HWaiting queue: %u/10",waiting_visitors);
     printf("\x1b[9;2HCached Mii visitors: %u",roster.count);
     printf("\x1b[10;2HLocal radio: %-14s", radio_status());
     printf("\x1b[11;2HAuto scan: %s",auto_radio?"Enabled":"Disabled");
@@ -273,7 +275,8 @@ static void draw(void) {
     printf("\x1b[4;2HStorage: %s", storage_ok ? "Ready" : "UNAVAILABLE");
     printf("\x1b[6;2HNew %u / duplicate %u",
             last_poll.accepted, last_poll.duplicates);
-    printf("\x1b[8;2HInvalid: %u  I/O errors: %u",
+    printf("\x1b[8;2HWaiting queue: %u/10",waiting_visitors);
+    printf("\x1b[9;2HInvalid: %u  I/O errors: %u",
             last_poll.invalid, last_poll.io_errors);
     printf("\x1b[10;2HPeer ACK: %u (unauthenticated)",radio.ack.confirmed);
     printf("\x1b[11;2HA: Export your profile");
@@ -303,6 +306,7 @@ static void poll_now(void) {
             last_poll.io_errors+=imported.io_errors;
         } else last_poll.io_errors++;
         if(spds_storage_total(save_dir, &total)==0) save_puzzle_progress();
+        if(spds_storage_queue_count(save_dir,&waiting_visitors)!=0) ++last_poll.io_errors;
         else ++last_poll.io_errors;
         refresh_roster();
     }
@@ -440,6 +444,7 @@ int main(void) {
             draw();
         }
         if(roster_open && (down & KEY_START)) {
+            if(spds_storage_queue_clear(save_dir)==0) waiting_visitors=0;
             room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;draw();continue;
         }
         if(roster_open && (down & KEY_Y)) {
@@ -533,12 +538,14 @@ int main(void) {
                          * lost, but never ACK an unwritten encounter. */
                         int stored=spds_storage_receive(save_dir,&guest,
                                       myself.sender_id,(uint32_t)time(NULL));
-                        if(stored>=0) {
+                        if(stored==0 || stored==1) {
                             /* Only a durable encounter may be acknowledged or relayed. */
                             spds_relay_mark_durable(&relay,guest.sender_id,guest.nonce);
                             spds_wifi_queue_ack(&radio,guest.sender_id,guest.nonce);
                         }
-                        if(stored>0) {
+                        if(stored==SPDS_STORAGE_QUEUE_FULL) {
+                            ++last_poll.invalid; /* no ACK: peer may retry after queue clear */
+                        } else if(stored>0) {
                             ++total;
                             ++last_poll.accepted;
                             save_puzzle_progress();

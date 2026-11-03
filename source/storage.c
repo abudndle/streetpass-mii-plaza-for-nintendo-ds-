@@ -92,14 +92,44 @@ static int accept(const char *logpath, const SpdsRecord *r, uint32_t now) {
     if (fclose(f) != 0) ok = 0;
     return ok ? 1 : -1;
 }
+int spds_storage_queue_count(const char *base,unsigned *count) {
+    char path[SPDS_PATH_MAX],line[128];
+    if(!base || !count || path_join(path,sizeof(path),base,"pending.tsv")) return -1;
+    *count=0;
+    FILE *f=fopen(path,"r");
+    if(!f) return errno==ENOENT?0:-1;
+    while(fgets(line,sizeof line,f)) if(line[0]) ++*count;
+    int bad=ferror(f); fclose(f); return bad?-1:0;
+}
+int spds_storage_queue_clear(const char *base) {
+    char path[SPDS_PATH_MAX];
+    if(!base || path_join(path,sizeof(path),base,"pending.tsv")) return -1;
+    FILE *f=fopen(path,"w"); if(!f) return -1;
+    return fclose(f)==0?0:-1;
+}
+static int queue_append(const char *base,const SpdsRecord *r,uint32_t now) {
+    char path[SPDS_PATH_MAX];
+    if(path_join(path,sizeof(path),base,"pending.tsv")) return -1;
+    FILE *f=fopen(path,"a"); if(!f) return -1;
+    int n=fprintf(f,"%016llx\\t%lu\\n",(unsigned long long)r->sender_id,(unsigned long)now);
+    int ok=n>0 && fflush(f)==0; if(fclose(f)!=0) ok=0;
+    return ok?0:-1;
+}
 int spds_storage_receive(const char *base, const SpdsRecord *r,
                          uint64_t own_id, uint32_t now) {
-    char logpath[SPDS_PATH_MAX];
+    char logpath[SPDS_PATH_MAX]; unsigned waiting=0;
     if (!r || !base || !r->sender_id || r->sender_id == own_id)
         return r && r->sender_id == own_id ? 0 : -1;
-    if (path_join(logpath, sizeof(logpath), base, "encounters.tsv"))
-        return -1;
-    return accept(logpath, r, now);
+    if (path_join(logpath, sizeof(logpath), base, "encounters.tsv")) return -1;
+    int seen=seen_recent(logpath,r->sender_id,now);
+    if(seen<0) return -1;
+    if(seen) return 0;
+    if(spds_storage_queue_count(base,&waiting)!=0) return -1;
+    if(waiting>=SPDS_VISITOR_QUEUE_LIMIT) return SPDS_STORAGE_QUEUE_FULL;
+    int result=accept(logpath,r,now);
+    if(result!=1) return result;
+    if(queue_append(base,r,now)!=0) return -1;
+    return 1;
 }
 int spds_storage_poll(const char *base, uint64_t own_id,
                       uint32_t now, SpdsPollStats *stats) {
@@ -128,8 +158,9 @@ int spds_storage_poll(const char *base, uint64_t own_id,
             if (remove(full) != 0) ++stats->io_errors;
             continue;
         }
-        int result = accept(logpath, &rec, now);
+        int result = spds_storage_receive(base,&rec,own_id,now);
         if (result < 0) { ++stats->io_errors; continue; }
+        if (result == SPDS_STORAGE_QUEUE_FULL) continue;
         if (result == 0) ++stats->duplicates;
         else ++stats->accepted;
         if (remove(full) != 0) ++stats->io_errors;
