@@ -54,6 +54,42 @@ Research references:
 - Nintendo support, StreetPass is compatible with Nintendo 3DS software:
   https://en-americas-support.nintendo.com/app/answers/detail/a_id/404/p/50/c/950
 
+## USA StreetPass Mii Plaza title lock
+
+The 3DS test target is the North American/USA StreetPass Mii Plaza title
+only: title ID `0004001000021800` (region E). Do not substitute the EUR or
+JPN title, Mii Plaza clones, or a custom 3DS companion.
+
+The user's supplied `title.tmd` contains title ID
+`0004001000021800` at the TMD title-ID field, confirming that the metadata
+is for the USA title. The supplied `00000021.app` (16,068,608 bytes) and
+`00000024.app` (671,744 bytes) match the two content sizes listed in the
+provided metadata, but their locally computed SHA-256 digests do not match
+the TMD content hashes. They must therefore be treated as unverified
+content (for example, potentially encrypted or paired with a different
+metadata/content revision), not as a verified installable title.
+
+Known USA title versions include v1027, v2048, v3087, v4096, v5124 and
+v5136. The exact version represented by the user's supplied metadata must
+be established from its parsed TMD fields and content records before
+packaging. Prefer a complete, internally consistent USA title dump; never
+mix content from different title versions or regions.
+
+Validation gates before AzaharPlus installation:
+- Parse and record the TMD title ID, title version, content count, content
+  IDs, indices, sizes, and hashes.
+- Verify every supplied content against its corresponding TMD hash after
+  applying the correct lawful decryption/verification procedure.
+- Require the matching title ticket and all required contents for CIA
+  creation; verify the final CIA's title ID and content table.
+- Keep title contents, tickets, keys, system files, and StreetPass saves
+  private; never commit or upload them to public CI artifacts.
+- Only report the USA title as installed after AzaharPlus lists and boots
+  the actual title.
+
+Reference for USA title ID and known title versions:
+https://yls8.mtheall.com/ninupdates/titlelist.php?reg=E&sys=ctr&tid=0004001000021800
+
 ## AzaharPlus emulator test path (ZipPass)
 
 AzaharPlus adds an emulator-side StreetPass workflow named **ZipPass**.
