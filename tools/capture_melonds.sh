@@ -17,8 +17,13 @@ if (( ${#ids[@]} == 0 )); then
   echo "No visible melonDS window found. Launch the ROM first." >&2
   exit 1
 fi
+if (( ${#ids[@]} != 1 )); then
+  echo "Found ${#ids[@]} melonDS windows; close extra windows before capture." >&2
+  exit 1
+fi
 mkdir -p "$(dirname "$out")"
 import -window "${ids[0]}" "$out"
+# Fail closed if the capture did not produce a nonempty file.
 test -s "$out"
 # Reject malformed PNGs and embedded metadata before public sharing.
 python3 "$(dirname "$0")/check_png.py" "$out"
