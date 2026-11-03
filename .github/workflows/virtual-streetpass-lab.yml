@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       capture_only:
-        description: Capture emulator startup windows; do not claim StreetPass exchange
+        description: Capture emulator startup windows; NetPass is reference-only
         type: boolean
         default: true
         required: true
@@ -61,8 +61,8 @@ jobs:
       - name: Launch AzaharPlus and melonDS in isolated virtual displays
         run: |
           set -euo pipefail
-          AZAHAR="$(find lab/azaharplus -type f -name '*.AppImage' -print -quit)"
-          MELONDS_ZIP_APP="$(find lab/melonds -type f -name '*.AppImage' -print -quit)"
+          AZAHAR="$(find "$PWD/lab/azaharplus" -type f -name '*.AppImage' -print -quit)"
+          MELONDS_ZIP_APP="$(find "$PWD/lab/melonds" -type f -name '*.AppImage' -print -quit)"
           test -n "$AZAHAR"
           test -n "$MELONDS_ZIP_APP"
           (cd lab/azaharplus && "$AZAHAR" --appimage-extract >/tmp/azahar-extract.log 2>&1)
@@ -95,6 +95,7 @@ jobs:
           printf 'AzaharPlus asset: %s\n' "$(cat /tmp/azahar-name)" > screenshots/emulator-versions.txt
           printf 'melonDS: official 1.1 Linux AppImage\n' >> screenshots/emulator-versions.txt
           printf 'Capture mode: startup-window only; no StreetPass exchange claimed\n' >> screenshots/emulator-versions.txt
+          printf 'NetPass: documentation reference only; not installed or run\n' >> screenshots/emulator-versions.txt
           cat /tmp/azaharplus.log || true
           cat /tmp/melonds.log || true
       - uses: actions/upload-artifact@v4
