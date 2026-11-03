@@ -76,8 +76,8 @@ jobs:
               cat /tmp/melonds-node-a.log /tmp/melonds-node-b.log
               exit 1
             fi
-            import -window "${windows[0]}" -alpha off PNG24:screenshots/node-a.png
-            import -window "${windows[1]}" -alpha off PNG24:screenshots/node-b.png
+            import -window "${windows[0]}" miff:- | convert miff:- -alpha off -type TrueColor PNG24:screenshots/node-a.png
+            import -window "${windows[1]}" miff:- | convert miff:- -alpha off -type TrueColor PNG24:screenshots/node-b.png
           '
           python3 tools/strip_png_metadata.py screenshots/node-a.png
           python3 tools/strip_png_metadata.py screenshots/node-b.png
