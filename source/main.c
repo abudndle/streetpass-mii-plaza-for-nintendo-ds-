@@ -533,8 +533,11 @@ int main(void) {
                          * lost, but never ACK an unwritten encounter. */
                         int stored=spds_storage_receive(save_dir,&guest,
                                       myself.sender_id,(uint32_t)time(NULL));
-                        if(stored>=0)
+                        if(stored>=0) {
+                            /* Only a durable encounter may be acknowledged or relayed. */
+                            spds_relay_mark_durable(&relay,guest.sender_id,guest.nonce);
                             spds_wifi_queue_ack(&radio,guest.sender_id,guest.nonce);
+                        }
                         if(stored>0) {
                             ++total;
                             ++last_poll.accepted;
