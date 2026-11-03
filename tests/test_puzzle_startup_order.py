@@ -23,10 +23,9 @@ class PuzzleStartupOrderTests(unittest.TestCase):
         handler = source[begin:end]
         self.assertIn("unsigned previous_selection=puzzle.selected;", handler)
         self.assertIn("if(puzzle.selected!=previous_selection)", handler)
-        self.assertIn("if(spds_puzzle_save(save_dir,&puzzle)!=0)", handler)
-        self.assertIn("puzzle.selected=previous_selection;", handler)
+        self.assertIn("if(spds_puzzle_commit_selection(save_dir,&puzzle,previous_selection)<0)", handler)
         self.assertIn("++puzzle_save_errors;", handler)
-        self.assertLess(handler.index("spds_puzzle_save(save_dir,&puzzle)"),
+        self.assertLess(handler.index("spds_puzzle_commit_selection(save_dir,&puzzle,previous_selection)"),
                         handler.index("if(down & KEY_A)"))
 
 if __name__ == "__main__":
