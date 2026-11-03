@@ -36,6 +36,8 @@ test:
 	./build-host/test_bark_mode
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/relay.c source/protocol.c tests/test_relay.c -o build-host/test_relay
 	./build-host/test_relay
+	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource -Icompanion source/protocol.c source/relay.c companion/spdr_companion.c tests/test_spdr_companion.c -o build-host/test_spdr_companion
+	./build-host/test_spdr_companion
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/plaza_roster.c tests/test_plaza_roster.c -o build-host/test_plaza_roster
 	./build-host/test_plaza_roster
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/radio_ack.c source/protocol.c tests/test_radio_ack.c -o build-host/test_radio_ack
