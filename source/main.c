@@ -16,6 +16,8 @@
 #include "plaza_roster.h"
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
+#include "plaza_3d.h"
+#include "room_touch.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -107,6 +109,7 @@ static int load_mii_from_sd(void) {
 static void refresh_roster(void) {
     if (!storage_ok) {
         visitor_count=0;
+        spds_plaza_3d_set_visible(0);
         spds_plaza_roster_set_count(&roster,0);
         return;
     }
@@ -121,6 +124,7 @@ static void refresh_roster(void) {
                   (int)((unsigned)page_total-page_start) : 0;
     if(visitor_count>(int)SPDS_PLAZA_PAGE_SIZE)
         visitor_count=(int)SPDS_PLAZA_PAGE_SIZE;
+    spds_plaza_3d_set_visible((unsigned)visitor_count);
 }
 static void save_puzzle_progress(void) {
     if(!storage_ok || !puzzle_ready) return;
@@ -142,6 +146,21 @@ static int preview_mii_slot(void) {
     return mii_picker_valid;
 }
 static void draw(void) {
+    if (room_open && spds_plaza_3d_active()) {
+        consoleSelect(&bottom_screen);
+        printf("\\x1b[2J\\x1b[1;2HPLAZA ROOM - 3D");
+        printf("\\x1b[3;2HVisitors: %u  Page %u/%u",roster.count,
+               spds_plaza_roster_page(&roster)+1u,spds_plaza_roster_pages(&roster));
+        for(int i=0;i<visitor_count && i<3;i++)
+            printf("\\x1b[%d;2H%c %-.24s",5+i*3,
+                   i==(int)room_selected?'>':' ',visitors_on_screen[i].name);
+        if(!visitor_count) printf("\\x1b[7;2HNo visitors available");
+        printf("\\x1b[16;2HD-Pad: Select visitor");
+        printf("\\x1b[17;2HA: Open visitor details");
+        printf("\\x1b[19;2HLEFT/RIGHT: Room page");
+        printf("\\x1b[21;2HB: Back to roster");
+        return;
+    }
     consoleSelect(&top_screen);
     if(mii_picker_open) {
         printf("\x1b[2J\x1b[2;2HMII MAKER GALLERY");
@@ -413,7 +432,18 @@ int main(void) {
             if(changed) draw();
         }
         if(room_open) {
-            if(down & KEY_B) {room_open=0;roster_open=1;draw();continue;}
+            if(spds_plaza_3d_active()) {
+                spds_plaza_3d_set_visitors((unsigned)visitor_count, room_selected);
+                spds_plaza_3d_render();
+            }
+            if(down & KEY_B) {
+                if(spds_plaza_3d_active()) {
+                    spds_plaza_3d_leave();
+                    consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
+                                31, 0, true, true);
+                }
+                room_open=0;roster_open=1;draw();continue;
+            }
             if(down & (KEY_LEFT|KEY_RIGHT)) {
                 spds_plaza_roster_change_page(&roster,(down & KEY_LEFT)?-1:1);
                 room_selected=0;
@@ -424,8 +454,24 @@ int main(void) {
                 else room_selected=(room_selected+1u)%(unsigned)visitor_count;
                 draw();continue;
             }
+            if(visitor_count && (down & KEY_TOUCH)) {
+                touchPosition touch;
+                touchRead(&touch);
+                int slot = spds_room_touch_slot(touch.px, touch.py,
+                                                (unsigned)visitor_count);
+                if(slot >= 0) {
+                    room_selected = (unsigned)slot;
+                    draw();
+                    continue;
+                }
+            }
             if(visitor_count && (down & KEY_A)) {
                 roster.selected=spds_plaza_roster_page(&roster)*SPDS_PLAZA_PAGE_SIZE+room_selected;
+                if(spds_plaza_3d_active()) {
+                    spds_plaza_3d_leave();
+                    consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
+                                31, 0, true, true);
+                }
                 room_open=0;roster_open=1;
                 spds_plaza_roster_show_detail(&roster);draw();continue;
             }
@@ -446,7 +492,11 @@ int main(void) {
         }
         if(roster_open && (down & KEY_START)) {
             if(spds_storage_queue_clear(save_dir)==0) waiting_visitors=0;
-            room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;draw();continue;
+            room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;
+            if(storage_ok && !spds_plaza_3d_enter(save_dir))
+                consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
+                            31, 0, true, true);
+            draw();continue;
         }
         if(roster_open && (down & KEY_Y)) {
             puzzle_open=1;

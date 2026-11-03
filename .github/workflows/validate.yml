@@ -1,7 +1,7 @@
 name: Validate DS Plaza
 on:
   push:
-    branches: [main, 'dev/**', 'feature/**']
+    branches: [main, 'dev/**', 'feature/**', 'port/**']
   pull_request:
   workflow_dispatch:
   schedule:
@@ -44,6 +44,8 @@ jobs:
       image: skylyrac/blocksds:slim-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Nitro Engine (DSMA animated model support)
+        run: wf-pacman -Sy --noconfirm blocksds-nitroengine
       - name: Build native DS/DSi homebrew ROM
         run: make
       - name: Validate output exists and is not empty

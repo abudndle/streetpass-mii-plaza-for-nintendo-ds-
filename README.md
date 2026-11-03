@@ -1,4 +1,8 @@
 # StreetPass Mii Plaza for Nintendo DS / DSi
+### DS/DSi library-backed port
+
+The current port adds an optional Nitro Engine Plaza-room renderer using its DSMA-backed DSM/DSA skeletal animation path. It is built only when the BlocksDS Nitro Engine package is installed; model assets remain user-supplied and private. See [DS port library architecture](docs/DS_PORT_LIBRARY_ARCHITECTURE.md) for the integration map, DSMA conversion constraints, and the remaining 2D/audio/storage/DSi work.
+
 
 An actively developed, independent homebrew adaptation targeting the original Nintendo 3DS **StreetPass Mii Plaza**, built for Nintendo DS/DS Lite flashcarts and DSi SD homebrew.
 
