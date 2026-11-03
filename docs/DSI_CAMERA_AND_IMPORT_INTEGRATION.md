@@ -53,6 +53,23 @@ Use the BlocksDS-maintained libnds headers and libraries that match the project'
 | Original DS fallback | Camera and SD-only actions disabled; retain DLDI storage and manual import path |
 | DSi enhanced mode | Enable camera/SD only after checking DSi mode and hardware capability; never infer capability from emulator name alone |
 
+## Implemented camera adapter slice
+
+`source/dsi_camera.c` now uses the official BlocksDS/libnds high-level camera
+API (`cameraInit`, `cameraSelect`, `cameraStartTransfer`,
+`cameraTransferActive`, `cameraStopTransfer`, `cameraDeinit`) rather than
+copying the older standalone project's raw-register/PXI driver. It is gated by
+`isDSiMode()`, selects the inner camera, displays a 256x192 RGB preview, and
+captures a 640x480 YUV422 frame using NDMA channel 1. The capture is saved
+atomically as `camera_last.yuv` under the app's configured save directory.
+The Plaza main screen opens this diagnostic capture screen with L+Y and
+returns to the Plaza on completion.
+
+This is a camera capture milestone, not yet the photo-to-Mii feature: YUV-to-RGB
+conversion, PNG/JPEG output, image-to-Mii candidate generation, QR scanning,
+and DSi SD-specific path selection remain to be implemented. Original DS mode
+returns without touching camera hardware.
+
 ## Required engineering work
 
 1. Audit the current BlocksDS SDK/libnds camera support first. If a supported camera API is present, use it rather than maintaining raw register code.
