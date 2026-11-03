@@ -22,6 +22,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Host codec and storage tests
         run: make test
+      - name: Emulator diagnostics regression tests
+        run: python3 -m unittest discover -s tests -p 'test_emulator_preflight.py' -v
       - name: Verify proprietary files are absent
         run: |
           python3 - <<'PY'
