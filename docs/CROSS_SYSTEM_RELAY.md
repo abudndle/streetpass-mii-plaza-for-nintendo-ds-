@@ -26,3 +26,24 @@ Nintendo says StreetPass is compatible only with Nintendo 3DS software. Local St
 Never mark DS ↔ unmodified 3DS compatibility passed based on host tests, packet parsing, Wi-Fi association, emulator output, a custom AP or DS-to-DS success. Keep private Mii data and console identifiers out of public artifacts.
 
 References: [StreetPass overview](https://en-americas-support.nintendo.com/app/answers/detail/a_id/404/p/50/c/950), [SpotPass ended](https://en-americas-support.nintendo.com/app/answers/detail/a_id/403/p/50/c/183), [online service discontinuation](https://en-americas-support.nintendo.com/app/answers/detail/a_id/63227/p/603/c/871), [Nintendo relay-point history](https://iwataasks.nintendo.com/interviews/3ds/streetpass-relay-points/0/2/).
+
+## Expanded requirement: multiple 3DS and DS/DSi systems in one area
+
+The target deployment contains **multiple Nintendo 3DS systems and multiple Nintendo DS/DSi systems in the same area**, participating in a shared visitor-exchange experience. This is a project goal, not yet a demonstrated cross-family capability.
+
+Keep three layers explicit:
+
+1. **Retail 3DS native StreetPass:** multiple unmodified 3DS systems exchange native StreetPass data with each other through Nintendo's built-in service. This remains independent of the DS homebrew protocol.
+2. **DS/DSi homebrew relay:** DS and DSi instances exchange this project's SPDS/SPDR messages. Physical multi-console tests are required; host tests and ROM builds do not prove radio interoperability.
+3. **Mixed-family bridge:** DS/DSi and multiple 3DS systems may share a custom relay only if a compatible 3DS-side participant or a documented stock-firmware interface is implemented and tested. A 3DS homebrew companion is optional custom networking, not native StreetPass on an unmodified 3DS. Do not claim DS-origin visitors enter the retail Mii Plaza queue without proof.
+
+### Mixed-network test plan
+
+- Test at least two DS/DSi nodes and two 3DS nodes in the same RF area.
+- Test DS/DSi-only discovery/exchange and 3DS-native StreetPass independently first.
+- If a 3DS homebrew companion is used, test discovery, authenticated gateway session, conversion, durable ACK, duplicate suppression, hop limits and recovery.
+- Keep the DS project's ten-pending-visitor limit and 3,000-Mii saved population cap separate from each retail 3DS's own StreetPass queue.
+- Record hardware, software versions, direction and redacted evidence. Never publish console identifiers, private keys, personal Mii data or proprietary assets.
+- Report each path independently: DS/DSi↔DS/DSi, 3DS↔3DS native, DS/DSi↔3DS companion, and DS/DSi↔unmodified 3DS native Plaza.
+
+**Mixed-family exchange remains unverified.** This requirement does not override protocol boundaries.
