@@ -12,6 +12,15 @@ static NE_Model *visitor_models[SPDS_ROOM_VISITORS];
 static NE_Animation *visitor_idle;
 static int renderer_active;
 
+static void restore_2d_display(void)
+{
+    irqSet(IRQ_VBLANK, NULL);
+    irqSet(IRQ_HBLANK, NULL);
+    irqDisable(IRQ_HBLANK);
+    videoSetMode(MODE_0_2D);
+    vramSetBankA(VRAM_A_MAIN_BG);
+}
+
 static void draw_room(void *unused)
 {
     (void)unused;
@@ -55,12 +64,15 @@ int spds_plaza_3d_enter(const char *save_dir)
     irqEnable(IRQ_HBLANK);
     irqSet(IRQ_VBLANK, NE_VBLFunc);
     irqSet(IRQ_HBLANK, NE_HBLFunc);
-    if (NE_Init3D() != 0)
+    if (NE_Init3D() != 0) {
+        restore_2d_display();
         return 0;
+    }
 
     room_camera = NE_CameraCreate();
     if (!room_camera) {
         NE_End();
+        restore_2d_display();
         return 0;
     }
     NE_CameraSet(room_camera, 0.0f, 1.25f, 5.5f,
@@ -69,6 +81,7 @@ int spds_plaza_3d_enter(const char *save_dir)
     visitor_idle = NE_AnimationCreate();
     if (!visitor_idle || !NE_AnimationLoadFAT(visitor_idle, anim_path)) {
         NE_End();
+        restore_2d_display();
         room_camera = NULL;
         visitor_idle = NULL;
         return 0;
@@ -78,6 +91,7 @@ int spds_plaza_3d_enter(const char *save_dir)
     if (!visitor_models[0] ||
         !NE_ModelLoadDSMFAT(visitor_models[0], mesh_path)) {
         NE_End();
+        restore_2d_display();
         room_camera = NULL;
         visitor_idle = NULL;
         memset(visitor_models, 0, sizeof(visitor_models));
@@ -92,6 +106,7 @@ int spds_plaza_3d_enter(const char *save_dir)
         visitor_models[i] = NE_ModelCreate(NE_Animated);
         if (!visitor_models[i]) {
             NE_End();
+            restore_2d_display();
             room_camera = NULL;
             visitor_idle = NULL;
             memset(visitor_models, 0, sizeof(visitor_models));
@@ -123,14 +138,12 @@ void spds_plaza_3d_leave(void)
 
     renderer_active = 0;
     NE_End();
+    restore_2d_display();
     room_camera = NULL;
     visitor_idle = NULL;
     memset(visitor_models, 0, sizeof(visitor_models));
 
-    /* Nitro Engine owns the main 3D display while the room is open.
-     * Restore the existing libnds 2D top-screen console on exit. */
-    videoSetMode(MODE_0_2D);
-    vramSetBankA(VRAM_A_MAIN_BG);
+    /* Nitro Engine owns the main 3D display while the room is open. */
 }
 
 int spds_plaza_3d_active(void)
