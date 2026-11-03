@@ -23,6 +23,10 @@ homebrew application's cartridge save is modified. See
 [portable service folder and Mii integration](docs/PORTABLE_SERVICE.md).
 No SD file can autonomously run in the background of unrelated DS ROMs.
 
+## 3D room renderer (Nitro Engine + DSMA)
+
+The room renderer is being migrated to AntonioND's Nitro Engine and its DSMA skeletal-animation support rather than a project-written 3D engine. The native BlocksDS build links `-lNE`; the renderer loads DSM/DSA visitor assets from `streetpass-plaza/models/` and retains the existing Mii records and Plaza controls. Authentic per-Mii model conversion and original Plaza assets remain separate unfinished work. See [Nitro Engine integration](docs/NITRO_ENGINE_INTEGRATION.md).
+
 ## Current verified progress
 
 - Bootable-format `.nds` homebrew **compiles** using the official BlocksDS Docker image; GitHub Actions uploads the `streetpass-plaza-ds-homebrew` artifact. A melonDS screenshot-capture workflow exists; emulator launch/screenshot artifacts must be checked per run. Cross-emulator StreetPass/NetPass tests remain outstanding.
