@@ -96,6 +96,11 @@ static void exercise_navigation_transaction(void) {
     assert(spds_puzzle_commit_selection(folder,&p,0u)==1);
     assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
     assert(spds_puzzle_commit_selection(folder,&p,1u)==0);
+    /* Even invalid in-memory state must restore the prior visible cursor. */
+    p.selected=SPDS_PUZZLE_PIECES;
+    assert(spds_puzzle_commit_selection(folder,&p,1u)==-1);
+    assert(p.selected==1u);
+    assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
     assert(spds_puzzle_move(&p,1,0));
     /* A regular file cannot contain puzzle.tmp: deterministic I/O failure. */
     char blocker[256];
