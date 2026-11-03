@@ -115,7 +115,8 @@ jobs:
             elif [[ "$code" -eq 0 ]]; then
               echo "$binary exited normally (GUI launch candidate)"
             else
-              echo "::warning::$binary exited with code $code; GUI launch NOT verified"
+              echo "::error::$binary exited with code $code; GUI launch NOT verified"
+              exit 1
             fi
           done
           echo "No ROM, 3DS system files or StreetPass exchanges were used"
