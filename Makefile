@@ -22,6 +22,8 @@ endif
 .PHONY: test
 test:
 	@mkdir -p build-host
+	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/protocol.c source/storage.c tests/test_queue.c -o build-host/test_queue
+	./build-host/test_queue
 	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/protocol.c source/storage.c tests/test_protocol.c -o build-host/test_protocol
 	./build-host/test_protocol
 	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/protocol.c source/storage.c source/background.c tests/test_background.c -o build-host/test_background

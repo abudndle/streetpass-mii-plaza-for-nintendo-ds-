@@ -166,6 +166,7 @@ int spds_visitor_poll(const char *base,uint64_t own_id,uint32_t now,
         }
         int accepted=spds_storage_receive(base,&profile,own_id,now);
         if(accepted<0) { stats->io_errors++; continue; }
+        if(accepted==SPDS_STORAGE_QUEUE_FULL) { stats->queue_full++; continue; }
         if(accepted==0) stats->duplicates++;
         else if(!save_received(base,&profile,&avatar)) {
             /* Log written, retry could be considered duplicate: report error
