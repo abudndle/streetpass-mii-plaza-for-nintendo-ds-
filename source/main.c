@@ -412,8 +412,7 @@ int main(void) {
                 }
             }
             if(puzzle.selected!=previous_selection) {
-                if(spds_puzzle_save(save_dir,&puzzle)!=0) {
-                    puzzle.selected=previous_selection;
+                if(spds_puzzle_commit_selection(save_dir,&puzzle,previous_selection)<0) {
                     ++puzzle_save_errors;
                 } else {
                     puzzle_detail=0;
