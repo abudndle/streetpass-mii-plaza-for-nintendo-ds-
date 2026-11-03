@@ -26,7 +26,7 @@ jobs:
       - name: Prepare Linux package index
         run: sudo apt-get update
       - name: Install AppImage runtime libraries
-        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libegl1 libgl1 libfuse2t64 libxcb-cursor0
+        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libegl1 libgl1 libopengl0 libfuse2t64 libxcb-cursor0
       - name: Attempt distro melonDS and AzaharPlus installation
         shell: bash
         run: |
