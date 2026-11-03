@@ -36,7 +36,7 @@ int main(void) {
     /* A valid generic StreetPass service is not proof of Mii Plaza. */
     f[n-22u+6u]^=0x01;
     assert(spds_3ds_probe_classify(f,n)==SPDS_3DS_PROBE_STREETPASS);
-    f[n-15]^=0x01;
+    f[n-22u+6u]^=0x01;
     /* Wrong Nintendo vendor type must not match. */
     f[n-22u+3u]=0x02;assert(!spds_3ds_probe_classify(f,n));f[n-22u+3u]=0x01;
     assert(spds_3ds_probe_classify(f,n)==3u);
