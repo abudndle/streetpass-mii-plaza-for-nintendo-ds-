@@ -176,12 +176,12 @@ static void draw(void) {
             motion.count=0;
         for(unsigned i=0;i<motion.count && i<(unsigned)visitor_count;i++) {
             unsigned x=motion.actors[i].x;
-            printf("\x1b[6;%uH%s",x,i==(int)room_selected?"   v":"    ");
-            printf("\x1b[7;%uH%s",x,i==(int)room_selected?" [O] ":"  O  ");
+            printf("\x1b[6;%uH%s",x,motion.actors[i].selected?"   v":"    ");
+            printf("\x1b[7;%uH%s",x,motion.actors[i].selected?" [O] ":"  O  ");
             unsigned stride=motion.actors[i].walk_frame;
             printf("\x1b[8;%uH%s",x,stride?" \\|/ ":" /|\\\\ ");
             printf("\x1b[9;%uH%s",x,stride?"  /| ":" / \\\\ ");
-            printf("\x1b[10;%uH%s",x,i==(int)room_selected?" ===== ":"       ");
+            printf("\x1b[10;%uH%s",x,motion.actors[i].selected?" ===== ":"       ");
             printf("\x1b[11;%uH%.9s",x,visitors_on_screen[i].name);
         }
         if(!visitor_count) printf("\x1b[9;2HNo visitors in this room");
