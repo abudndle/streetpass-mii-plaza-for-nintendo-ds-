@@ -22,6 +22,7 @@ static char save_dir[SPDS_PATH_MAX];
 static SpdsRecord myself;
 static SpdsPollStats last_poll;
 static int storage_ok;
+static const char *storage_status = "Not initialized";
 static unsigned total;
 static unsigned waiting_visitors;
 static SpdsWireless radio;
@@ -325,12 +326,18 @@ int main(void) {
     memset(&myself, 0, sizeof(myself));
     strcpy(myself.name, "DS Traveler");
     const char *drive = NULL;
-    if (fatInitDefault()) drive = fatGetDefaultDrive();
-    if (drive && snprintf(save_dir, sizeof(save_dir),
-                          "%sstreetpass-plaza", drive) <
-                     (int)sizeof(save_dir) &&
-        spds_storage_init(save_dir) == 0) {
+    if (fatInitDefault()) {
+        drive = fatGetDefaultDrive();
+        storage_status = drive ? "FAT mounted" : "No default FAT drive";
+    } else {
+        storage_status = "FAT init failed";
+    }
+    int save_path_ok = drive &&
+        snprintf(save_dir, sizeof(save_dir), "%sstreetpass-plaza", drive) <
+            (int)sizeof(save_dir);
+    if (save_path_ok && spds_storage_init(save_dir) == 0) {
         storage_ok = 1;
+        storage_status = "Ready";
         if (spds_storage_load_profile(save_dir, &myself) != 0) {
             /* Local identity is random best-effort, not cryptographic. */
             unsigned seed = (unsigned)time(NULL) ^ (unsigned)REG_VCOUNT;
@@ -346,6 +353,10 @@ int main(void) {
         if(spds_puzzle_load(save_dir,&puzzle)>=0) puzzle_ready=1;
         else puzzle_ready=0; /* Never overwrite a corrupt existing save. */
         poll_now();
+    } else if (drive && !save_path_ok) {
+        storage_status = "Save path too long";
+    } else if (drive) {
+        storage_status = "SD directory error";
     }
     spds_relay_init(&relay,myself.sender_id,1);
     spds_relay_encode(outgoing,&myself,SPDS_RELAY_MAX_HOPS,(uint32_t)time(NULL));
