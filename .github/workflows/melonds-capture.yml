@@ -30,7 +30,10 @@ jobs:
           APPIMAGE="$(find /opt/melonds -type f -name '*.AppImage' -print -quit)"
           test -n "$APPIMAGE"
           chmod +x "$APPIMAGE"
-          echo "$APPIMAGE" > /tmp/melonds-appimage-path
+          chmod +x "$APPIMAGE"
+          (cd /opt/melonds && "$APPIMAGE" --appimage-extract > /tmp/melonds-extract.log 2>&1)
+          test -x /opt/melonds/squashfs-root/AppRun
+          echo "/opt/melonds/squashfs-root/AppRun" > /tmp/melonds-appimage-path
       - name: Download ROM from the validated build run
         env:
           GH_TOKEN: ${{ github.token }}
@@ -56,7 +59,13 @@ jobs:
             pid=$!
             trap "kill $pid 2>/dev/null || true" EXIT
             sleep 15
-            kill -0 "$pid"
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo "melonDS exited before opening a window; startup log:"
+              cat /tmp/melonds.log
+              echo "AppImage extraction log:"
+              cat /tmp/melonds-extract.log
+              exit 1
+            fi
             bash tools/capture_melonds.sh screenshots/plaza-boot.png
           ' sh "$APPIMAGE" rom/streetpass-plaza-ds.nds
           python3 tools/check_png.py screenshots/plaza-boot.png
