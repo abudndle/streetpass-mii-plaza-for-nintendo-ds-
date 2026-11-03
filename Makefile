@@ -44,6 +44,8 @@ test:
 	./build-host/test_plaza_roster
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/plaza_roster.c source/plaza_scene.c tests/test_plaza_scene.c -o build-host/test_plaza_scene
 	./build-host/test_plaza_scene
+	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/plaza_roster.c source/plaza_scene.c source/plaza_motion.c tests/test_plaza_motion.c -o build-host/test_plaza_motion
+	./build-host/test_plaza_motion
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/radio_ack.c source/protocol.c tests/test_radio_ack.c -o build-host/test_radio_ack
 	./build-host/test_radio_ack
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/arrival_notice.c tests/test_arrival_notice.c -o build-host/test_arrival_notice
