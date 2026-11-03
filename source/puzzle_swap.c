@@ -116,7 +116,13 @@ int spds_puzzle_save(const char *base,const SpdsPuzzle *s) {
 }
 
 int spds_puzzle_commit_selection(const char *base,SpdsPuzzle *state,unsigned previous) {
-    if(!state || previous>=SPDS_PUZZLE_PIECES || !valid(state)) return -1;
+    if(!state || previous>=SPDS_PUZZLE_PIECES) return -1;
+    /* Invalid state cannot be saved, but a known prior cursor is still safe
+     * to restore so the caller never displays an uncommitted selection. */
+    if(!valid(state)) {
+        state->selected=previous;
+        return -1;
+    }
     if(state->selected==previous) return 0;
     if(spds_puzzle_save(base,state)==0) return 1;
     state->selected=previous;
