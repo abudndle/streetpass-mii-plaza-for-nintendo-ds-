@@ -94,6 +94,28 @@ int main(void) {
     strcpy(shown[0].name,"No changes");
     assert(spds_visitor_list_page(base,7,shown,1)==7);
     assert(!strcmp(shown[0].name,"No changes"));
+
+    /* Population boundary: all 3,000 Miis are enumerable and the next
+     * imported visitor remains in inbox instead of being consumed. */
+    for(unsigned i=0;i<SPDS_PLAZA_POPULATION_LIMIT-7u;i++) {
+        char file[320];
+        snprintf(file,sizeof file,"%s/visitors/%016llx.mds",base,
+                 (unsigned long long)(10000u+i));
+        FILE *dest=fopen(file,"wb"); assert(dest);
+        assert(fwrite(cached,1,sizeof cached,dest)==sizeof cached);
+        assert(fclose(dest)==0);
+    }
+    unsigned population=0;
+    assert(spds_visitor_count(base,&population)==0);
+    assert(population==SPDS_PLAZA_POPULATION_LIMIT);
+    assert(spds_visitor_list_page(base,2997,shown,3)==SPDS_PLAZA_POPULATION_LIMIT);
+    /* Existing import remains queued when the plaza population is full. */
+    f=fopen(incoming,"wb"); assert(f);
+    assert(fwrite(wire,1,sizeof wire,f)==sizeof wire); assert(fclose(f)==0);
+    assert(spds_visitor_poll(base,999999,1700001000u,&stats)==0);
+    assert(stats.population_full==1);
+    assert(access(incoming,F_OK)==0);
+
     puts("PASS: full-Mii visitor bundles, validated import, ownership, sharing and duplicate avoidance");
     return 0;
 }
