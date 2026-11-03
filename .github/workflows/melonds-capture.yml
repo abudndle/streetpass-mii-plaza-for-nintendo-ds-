@@ -1,12 +1,17 @@
 name: Genuine melonDS screenshot capture
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Validate DS Plaza"]
+    types: [completed]
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   capture:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'schedule')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -17,12 +22,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y melonds xvfb xdotool imagemagick
           command -v melonDS || command -v melonds
-      - name: Download latest validated homebrew ROM
+      - name: Download ROM from the validated build run
         env:
           GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -eu
-          gh run download --repo "${{ github.repository }}" --name streetpass-plaza-ds-homebrew --dir rom
+          mkdir -p rom
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            gh run download "$SOURCE_RUN_ID" --repo "${{ github.repository }}" --name streetpass-plaza-ds-homebrew --dir rom
+          else
+            gh run download --repo "${{ github.repository }}" --name streetpass-plaza-ds-homebrew --dir rom
+          fi
           test -s rom/streetpass-plaza-ds.nds
           python3 tools/verify_nds.py rom/streetpass-plaza-ds.nds
       - name: Capture real emulator window
