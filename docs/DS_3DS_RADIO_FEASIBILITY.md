@@ -63,3 +63,25 @@ The earlier feasibility note focused on physical retail hardware and should not 
 5. Save actual window screenshots and logs for each emulator and label instance, version, mode and test direction. No synthetic UI mockups as evidence.
 
 Emulator success is useful protocol/integration evidence but does not replace physical DS/DSi or retail 3DS tests.
+
+## Passive Mii Plaza discovery classifier milestone
+
+`source/streetpass_probe.c` now recognizes an IEEE 802.11 probe request
+carrying the documented `Nintendo_3DS_continuous_scan_000` SSID,
+Nintendo vendor OUI/type `00:1f:32:01`, and optionally the advertised
+Mii Plaza service identifier `00 02 08 00 00`. The DS monitor mode keeps
+only aggregate, anonymous match counts; it deliberately does not store
+MAC addresses or console identifiers. The host test synthesizes an
+anonymized frame with the documented information-element layout.
+
+This is **pattern recognition, not authentication**. The identifiers are
+public and spoofable. A host test cannot prove the DS hardware receives
+a 3DS frame, and two emulator windows cannot establish a compatible
+emulated radio path. The DS radio handler must be validated with actual
+captured packets on consented physical DS/DSi and 3DS equipment before
+a successful discovery claim is made. The stock-3DS encrypted CECD
+handshake and native Mii Plaza visitor delivery remain unimplemented.
+
+The scan listens on channels 1, 6 and 11 while explicitly opted in.
+Do not label probe counts as completed StreetPass encounters, and do
+not install or run NetPass as part of this milestone (reference only).

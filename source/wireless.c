@@ -139,9 +139,13 @@ int spds_wifi_tick(SpdsWireless *r,
         if(probe_ready) {
             unsigned n=probe_size;
             /* Raw callback only copies bytes; parse outside IRQ. */
-            int recognized=spds_3ds_probe_is_streetpass(probe_frame,n);
+            unsigned recognized=spds_3ds_probe_classify(probe_frame,n);
             probe_ready=0;
-            if(recognized) { ++r->probe_hits; return 3; }
+            if(recognized & SPDS_3DS_PROBE_STREETPASS) {
+                ++r->probe_hits;
+                if(recognized & SPDS_3DS_PROBE_PLAZA) ++r->plaza_probe_hits;
+                return 3;
+            }
         }
         return 0;
     }
