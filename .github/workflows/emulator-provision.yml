@@ -38,6 +38,37 @@ jobs:
             fi
           done
           echo 'Unavailable packages remain BLOCKED, not installed or tested'
+      - name: Download official Linux AppImages if distro packages are unavailable
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/emulators"
+          for spec in 'melonDS:melonDS-emu/melonDS' 'AzaharPlus:AzaharPlus/AzaharPlus'; do
+            name="${spec%%:*}"
+            repository="${spec#*:}"
+            if [[ "$name" == 'melonDS' ]] && { command -v melonDS >/dev/null || command -v melonds >/dev/null; }; then continue; fi
+            if [[ "$name" == 'AzaharPlus' ]] && { command -v azaharplus >/dev/null || command -v azahar >/dev/null; }; then continue; fi
+            echo "Inspecting official upstream release for $name ($repository)"
+            api="https://api.github.com/repos/$repository/releases/latest"
+            metadata="$(curl --fail --location --silent --show-error --retry 3 --max-time 30 "$api")"
+            tag="$(jq -r '.tag_name // empty' <<<"$metadata")"
+            if [[ "$name" == 'AzaharPlus' && "$tag" != 'AZAHAR_PLUS_2126_2_A' ]]; then
+              echo "::warning::AzaharPlus tag $tag has not been security-reviewed for this workflow; skipping"
+              continue
+            fi
+            asset="$(jq -r '[.assets[] | select((.name | test("(?i)(x86_64|amd64).*\\.appimage$|linux.*(x64|x86_64).*\\.appimage$")) and (.name | test("(?i)arm|aarch64") | not))] | first | .browser_download_url // empty' <<<"$metadata")"
+            if [[ -z "$asset" ]]; then
+              echo "::warning::No suitable Linux x86_64 AppImage published for $name release $tag"
+              continue
+            fi
+            dest="$RUNNER_TEMP/emulators/$name.AppImage"
+            curl --fail --location --silent --show-error --retry 3 --max-time 180 --output "$dest" "$asset"
+            test -s "$dest"
+            file "$dest"
+            sha256sum "$dest"
+            chmod +x "$dest"
+            echo "$name upstream AppImage downloaded; no boot or StreetPass exchange claimed"
+          done
       - name: Report emulator availability without claiming StreetPass
         run: |
           python3 tools/emulator_preflight.py --json | tee emulator-preflight.json
