@@ -27,10 +27,20 @@ int spds_relay_mark_durable(SpdsRelay *r,uint64_t sender,uint32_t nonce){
  for(unsigned i=0;i<SPDS_RELAY_CACHE;i++){SpdsRelaySeen *s=&r->seen[i];if(s->sender==sender&&s->nonce==nonce){s->durable=1;return 1;}}
  return 0;
 }
-int spds_relay_forward(SpdsRelay *r,unsigned i,uint8_t out[SPDS_RELAY_SIZE]){
+int spds_relay_prepare(SpdsRelay *r,unsigned i,uint8_t out[SPDS_RELAY_SIZE]){
  if(!r||!r->enabled||!out||i>=SPDS_RELAY_CACHE)return 0;
  SpdsRelaySeen *s=&r->seen[i];if(!s->sender||!s->durable||!s->hops||s->forwarded)return 0;
  SpdsRecord src;unsigned hops;uint32_t when;
  if(!spds_relay_decode(&src,&hops,&when,s->packet,SPDS_RELAY_SIZE)||!spds_relay_encode(out,&src,hops-1u,when))return 0;
+ return 1;
+}
+int spds_relay_commit_forward(SpdsRelay *r,unsigned i) {
+ if(!r||!r->enabled||i>=SPDS_RELAY_CACHE)return 0;
+ SpdsRelaySeen *s=&r->seen[i];
+ if(!s->sender||!s->durable||!s->hops||s->forwarded)return 0;
  s->forwarded=1;r->forwarded++;return 1;
+}
+/* Legacy combined operation retained for existing callers/tests. */
+int spds_relay_forward(SpdsRelay *r,unsigned i,uint8_t out[SPDS_RELAY_SIZE]){
+ return spds_relay_prepare(r,i,out) && spds_relay_commit_forward(r,i);
 }
