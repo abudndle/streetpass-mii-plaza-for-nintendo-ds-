@@ -13,15 +13,24 @@ jobs:
   capture:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'schedule')
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Install X11 and melonDS
+      - name: Install X11 and AppImage runtime dependencies
         run: |
-          sudo add-apt-repository -y universe
           sudo apt-get update
-          sudo apt-get install -y melonds xvfb xdotool imagemagick
-          command -v melonDS || command -v melonds
+          sudo apt-get install -y xvfb xdotool imagemagick unzip libfuse2
+      - name: Download official melonDS 1.1 Linux AppImage
+        run: |
+          set -eu
+          curl --fail --location --retry 3 -o /tmp/melonds.zip https://github.com/melonDS-emu/melonDS/releases/download/1.1/melonDS-1.1-appimage-x86_64.zip
+          echo "bf377420a2e95f2cd2cdda17d5372b51c2534f858b038db9ec6d129554875124  /tmp/melonds.zip" | sha256sum --check
+          mkdir -p /opt/melonds
+          unzip -q /tmp/melonds.zip -d /opt/melonds
+          APPIMAGE="$(find /opt/melonds -type f -name '*.AppImage' -print -quit)"
+          test -n "$APPIMAGE"
+          chmod +x "$APPIMAGE"
+          echo "$APPIMAGE" > /tmp/melonds-appimage-path
       - name: Download ROM from the validated build run
         env:
           GH_TOKEN: ${{ github.token }}
@@ -37,19 +46,19 @@ jobs:
           fi
           test -s rom/streetpass-plaza-ds.nds
           python3 tools/verify_nds.py rom/streetpass-plaza-ds.nds
-      - name: Capture real emulator window
+      - name: Launch official melonDS and capture actual window
         run: |
           set -eu
           mkdir -p screenshots
-          EMULATOR="$(command -v melonDS || command -v melonds)"
+          APPIMAGE="$(cat /tmp/melonds-appimage-path)"
           xvfb-run -a -s '-screen 0 1024x768x24' sh -ec '
             "$1" "$2" > /tmp/melonds.log 2>&1 &
             pid=$!
             trap "kill $pid 2>/dev/null || true" EXIT
-            sleep 12
+            sleep 15
             kill -0 "$pid"
             bash tools/capture_melonds.sh screenshots/plaza-boot.png
-          ' sh "$EMULATOR" rom/streetpass-plaza-ds.nds
+          ' sh "$APPIMAGE" rom/streetpass-plaza-ds.nds
           python3 tools/check_png.py screenshots/plaza-boot.png
       - name: Upload genuine screenshot only
         if: success()
