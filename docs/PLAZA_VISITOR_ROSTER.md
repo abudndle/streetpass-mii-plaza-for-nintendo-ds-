@@ -22,3 +22,18 @@ and the file pagination contract. `make` in BlocksDS compiles the ROM.
 This is a **functional text-mode visitor browser**, not an original Mii
 3D-room renderer or complete StreetPass Mii Plaza gameplay port. Nintendo
 assets and private CECD saves are not included.
+
+
+## Ten-visitor StreetPass wait queue requirement
+
+The Plaza's **pending arrival queue is limited to ten visitors**, matching the requested StreetPass wait-limit behavior. This is distinct from the long-term visitor archive and from the eight-hour per-sender duplicate cooldown.
+
+- Accept arrivals until ten pending visitor slots are occupied.
+- When the tenth slot is filled, stop accepting/acknowledging additional radio arrivals and leave SD inbox imports queued for later. Do not silently discard overflow visitors.
+- Show the live waiting count as `n/10` and indicate when the queue is full.
+- The player must enter/open the Plaza room to clear the pending wait queue. Clearing pending status must not delete the saved visitor Mii archive or reset duplicate-protection history.
+- Once the pending queue is cleared, accept the next batch, again up to ten visitors.
+- The cap applies to the shared DS/DSi relay wait queue regardless of whether the arrival came from local radio or manual SD import.
+- Native 3DS StreetPass remains a separate Nintendo-managed queue. The DS project's ten-slot queue does not change or control a retail 3DS's own queue.
+
+Implementation and regression tests must prove: 0→10 accepted, 11th held without ACK/deletion, clear→new ten accepted, duplicate still suppressed during cooldown, and archive retained after clearing.
