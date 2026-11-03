@@ -179,6 +179,34 @@ jobs:
           path: emulator-screenshots/melonds-homebrew.png
           if-no-files-found: error
           retention-days: 7
+      - name: Capture AzaharPlus first-run display
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p emulator-screenshots
+          xvfb-run -a -s '-screen 0 1280x900x24' bash -c '
+            set -euo pipefail
+            azaharplus > "$RUNNER_TEMP/azaharplus-screenshot.log" 2>&1 &
+            emulator_pid=$!
+            trap "kill $emulator_pid 2>/dev/null || true" EXIT
+            sleep 10
+            if ! kill -0 "$emulator_pid" 2>/dev/null; then
+              cat "$RUNNER_TEMP/azaharplus-screenshot.log"
+              echo "AzaharPlus exited before screenshot capture" >&2
+              exit 1
+            fi
+            import -display "$DISPLAY" -window root emulator-screenshots/azaharplus-first-run.png
+          '
+          test -s emulator-screenshots/azaharplus-first-run.png
+          identify emulator-screenshots/azaharplus-first-run.png
+          echo "AzaharPlus first-run UI captured. No title or system files were installed."
+      - name: Upload AzaharPlus screen capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: azaharplus-first-run-screen
+          path: emulator-screenshots/azaharplus-first-run.png
+          if-no-files-found: error
+          retention-days: 7
       - name: Headless GUI launch smoke tests (no ROM or system files)
         shell: bash
         run: |
