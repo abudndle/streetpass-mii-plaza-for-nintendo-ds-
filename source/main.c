@@ -16,6 +16,7 @@
 #include "plaza_roster.h"
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
+#include "plaza_3d.h"
 
 static PrintConsole top_screen, bottom_screen;
 static char save_dir[SPDS_PATH_MAX];
@@ -142,6 +143,21 @@ static int preview_mii_slot(void) {
     return mii_picker_valid;
 }
 static void draw(void) {
+    if (room_open && spds_plaza_3d_active()) {
+        consoleSelect(&bottom_screen);
+        printf("\\x1b[2J\\x1b[1;2HPLAZA ROOM - 3D");
+        printf("\\x1b[3;2HVisitors: %u  Page %u/%u",roster.count,
+               spds_plaza_roster_page(&roster)+1u,spds_plaza_roster_pages(&roster));
+        for(int i=0;i<visitor_count && i<3;i++)
+            printf("\\x1b[%d;2H%c %-.24s",5+i*3,
+                   i==(int)room_selected?'>':' ',visitors_on_screen[i].name);
+        if(!visitor_count) printf("\\x1b[7;2HNo visitors available");
+        printf("\\x1b[16;2HD-Pad: Select visitor");
+        printf("\\x1b[17;2HA: Open visitor details");
+        printf("\\x1b[19;2HLEFT/RIGHT: Room page");
+        printf("\\x1b[21;2HB: Back to roster");
+        return;
+    }
     consoleSelect(&top_screen);
     if(mii_picker_open) {
         printf("\x1b[2J\x1b[2;2HMII MAKER GALLERY");
