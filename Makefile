@@ -52,5 +52,5 @@ test:
 	./build-host/test_streetpass_probe
 	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/protocol.c source/storage.c tests/test_storage_restart.c -o build-host/test_storage_restart
 	@set -eu; d=$(mktemp -d); trap 'rm -rf "$d"' EXIT; ./build-host/test_storage_restart write "$d"; ./build-host/test_storage_restart read "$d"
-	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py tools/index_darc.py
+	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py tools/index_darc.py tools/verify_3ds_tmd.py tools/configure_melonds_dldi.py
 	python3 -m unittest discover -s tests -p 'test_*.py' -v
