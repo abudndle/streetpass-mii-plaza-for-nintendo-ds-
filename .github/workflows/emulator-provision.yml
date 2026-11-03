@@ -51,7 +51,7 @@ jobs:
           set -euo pipefail
           # Bound apt installation so a stalled package operation cannot hide
           # emulator/screenshot regressions behind a long-running CI step.
-          timeout --signal=TERM --kill-after=15s 240s sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 libegl1 libgl1 libopengl0 libfuse2t64 libxcb-cursor0 xvfb xauth imagemagick
+          timeout --signal=TERM --kill-after=15s 240s sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -o DPkg::Lock::Timeout=30 -o Acquire::Retries=2 libegl1 libgl1 libopengl0 libfuse2t64 libxcb-cursor0 xvfb xauth imagemagick tesseract-ocr
       - name: Attempt distro melonDS and AzaharPlus installation
         shell: bash
         run: |
@@ -180,7 +180,18 @@ jobs:
           '
           test -s emulator-screenshots/melonds-homebrew.png
           identify emulator-screenshots/melonds-homebrew.png
-          echo "Screenshot captured; content has not been visually validated"
+          echo "Screenshot captured; running OCR on DS storage diagnostic"
+          tesseract emulator-screenshots/melonds-homebrew.png "$RUNNER_TEMP/melonds-screen" 2>/dev/null
+          cat "$RUNNER_TEMP/melonds-screen.txt"
+          if grep -Eqi 'Storage:[[:space:]]*Ready' "$RUNNER_TEMP/melonds-screen.txt"; then
+            echo "PASS: melonDS DS application reports writable storage ready"
+          elif grep -Eqi 'Storage:[[:space:]]*FAT init failed' "$RUNNER_TEMP/melonds-screen.txt"; then
+            echo "::error::melonDS DLDI folder-sync was not mounted; DS app reports FAT init failed"
+            exit 1
+          else
+            echo "::error::Could not confirm DS storage state from emulator screenshot"
+            exit 1
+          fi
       - name: Upload melonDS screen capture for visual review
         uses: actions/upload-artifact@v4
         with:
