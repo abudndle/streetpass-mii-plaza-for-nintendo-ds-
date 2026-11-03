@@ -5,10 +5,15 @@ on:
     paths:
       - '.github/workflows/emulator-provision.yml'
       - 'tools/emulator_preflight.py'
+      - 'tools/configure_melonds_dldi.py'
+      - 'source/main.c'
   push:
-    branches: [main]
+    branches: [main, 'dev/**', 'feature/**']
     paths:
       - '.github/workflows/emulator-provision.yml'
+      - 'tools/emulator_preflight.py'
+      - 'tools/configure_melonds_dldi.py'
+      - 'source/main.c'
 
 permissions:
   contents: read
