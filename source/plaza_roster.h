@@ -1,6 +1,8 @@
 #ifndef SPDS_PLAZA_ROSTER_H
 #define SPDS_PLAZA_ROSTER_H
 #define SPDS_PLAZA_PAGE_SIZE 3u
+/* Saved population is independent of the ten-entry pending arrival queue. */
+#define SPDS_PLAZA_MAX_VISITORS 3000u
 typedef struct {
     unsigned count;
     unsigned selected;

@@ -8,7 +8,8 @@ void spds_plaza_roster_init(SpdsPlazaRoster *roster) {
 }
 void spds_plaza_roster_set_count(SpdsPlazaRoster *roster,unsigned count) {
     if (!roster) return;
-    roster->count=count;
+    roster->count=count>SPDS_PLAZA_MAX_VISITORS ? SPDS_PLAZA_MAX_VISITORS : count;
+    count=roster->count;
     if (!count) {
         roster->selected=0;
         roster->detail_open=0;
