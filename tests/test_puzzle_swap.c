@@ -84,9 +84,31 @@ static void exercise_disk(void) {
     remove(file);
     rmdir(folder);
 }
+
+static void exercise_navigation_transaction(void) {
+    char folder[]="/tmp/spds-nav-XXXXXX";
+    assert(mkdtemp(folder));
+    SpdsPuzzle p,loaded;
+    spds_puzzle_init(&p);
+    assert(spds_puzzle_save(folder,&p)==0);
+    assert(spds_puzzle_move(&p,1,0));
+    assert(spds_puzzle_commit_selection(folder,&p,0u)==1);
+    assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
+    assert(spds_puzzle_commit_selection(folder,&p,1u)==0);
+    assert(spds_puzzle_move(&p,1,0));
+    /* A missing destination directory forces the real atomic save to fail. */
+    assert(spds_puzzle_commit_selection("/nonexistent/spds-nav-test", &p,1u)==-1);
+    assert(p.selected==1u);
+    assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
+    char filename[256];
+    snprintf(filename,sizeof filename,"%s/puzzle.swp",folder);
+    assert(remove(filename)==0);
+    assert(rmdir(folder)==0);
+}
 int main(void) {
     exercise_board();
     exercise_disk();
+    exercise_navigation_transaction();
     puts("PASS: Puzzle Swap state, progress, safe persistence and corruption rejection");
     return 0;
 }
