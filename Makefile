@@ -48,5 +48,7 @@ test:
 	./build-host/test_arrival_notice
 	cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic -Isource source/puzzle_swap.c source/protocol.c tests/test_puzzle_swap.c -o build-host/test_puzzle_swap
 	./build-host/test_puzzle_swap
+	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/streetpass_probe.c tests/test_streetpass_probe.c -o build-host/test_streetpass_probe
+	./build-host/test_streetpass_probe
 	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py tools/index_darc.py
 	python3 -m unittest discover -s tests -p 'test_*.py' -v

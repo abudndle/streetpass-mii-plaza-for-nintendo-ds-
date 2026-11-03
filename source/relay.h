@@ -13,5 +13,9 @@ int spds_relay_decode(SpdsRecord *source,unsigned *hops,uint32_t *originated,con
 int spds_relay_accept(SpdsRelay *r,const uint8_t *packet,unsigned size,uint32_t now,SpdsRecord *source);
 /* Call only after local storage confirms the encounter is durable. */
 int spds_relay_mark_durable(SpdsRelay *r,uint64_t sender,uint32_t nonce);
+/* Preparation is side-effect free. Commit only after the radio driver
+ * accepts the frame; failed transmissions must remain retryable. */
+int spds_relay_prepare(SpdsRelay *r,unsigned i,uint8_t packet[SPDS_RELAY_SIZE]);
+int spds_relay_commit_forward(SpdsRelay *r,unsigned i);
 int spds_relay_forward(SpdsRelay *r,unsigned i,uint8_t packet[SPDS_RELAY_SIZE]);
 #endif

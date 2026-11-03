@@ -56,6 +56,7 @@ static int puzzle_detail;
 static unsigned puzzle_save_errors;
 static const char *radio_status(void) {
     if (radio.mode == SPDS_WIFI_OFF) return "Off";
+    if (radio.mode == SPDS_WIFI_MONITOR) return "3DS probe listen";
     if (radio.phase == SPDS_PHASE_START) return "Starting";
     if (radio.phase == SPDS_PHASE_SCANNING) return "Scanning";
     if (radio.phase == SPDS_PHASE_CONNECTING) return "Connecting";
@@ -207,7 +208,7 @@ static void draw(void) {
            sleep_override?"EXPERIMENTAL":"Off");
     printf("\x1b[13;2H3DS: no native CECD link");
     printf("\x1b[14;2HBackground: menu process only");
-    printf("\x1b[15;2HPeer ACKs: %u (not secure)",radio.ack.confirmed);
+    printf("\x1b[15;2HACK %u  3DS probes %u",radio.ack.confirmed,radio.probe_hits);
     if(puzzle_ready) printf("\x1b[21;2HPuzzle pieces: %u/%u",
                            spds_puzzle_completed(&puzzle),SPDS_PUZZLE_PIECES);
     printf("\x1b[16;2H%s",roster_open?"Plaza roster (page view):":"Recent saved visitor Miis:");
@@ -284,7 +285,7 @@ static void draw(void) {
     printf("\x1b[14;2HY: Choose Plaza Mii");
     printf("\x1b[15;2HB: Exit to loader");
     printf("\x1b[16;2HL: Host    R: Join/Scan");
-    printf("\x1b[17;2HSELECT: Radio off");
+    printf("\x1b[17;2HSELECT: Off; SEL+R: Probe");
     printf("\x1b[18;2HRX: %u TX: %u", radio.received, radio.sent);
     printf("\x1b[19;1HSD file exchange is a test");
     printf("\x1b[20;1Htransport, NOT radio StreetPass.");
@@ -487,10 +488,10 @@ int main(void) {
         if (!puzzle_open && (down & KEY_R) && storage_ok) {
             auto_radio=0;
             spds_wifi_stop(&radio);
-            spds_wifi_start(&radio, SPDS_WIFI_CLIENT);
+            spds_wifi_start(&radio, (keysHeld() & KEY_SELECT) ? SPDS_WIFI_MONITOR : SPDS_WIFI_CLIENT);
             draw();
         }
-        if (!puzzle_open && (down & KEY_SELECT)) {
+        if (!puzzle_open && (down & KEY_SELECT) && !(down & KEY_R)) {
             auto_radio=0;
             spds_wifi_stop(&radio);
             draw();
@@ -517,8 +518,9 @@ int main(void) {
             relay_send_frames=0;
             for(unsigned tries=0;tries<SPDS_RELAY_CACHE;tries++) {
                 unsigned index=relay_send_index++%SPDS_RELAY_CACHE;
-                if(spds_relay_forward(&relay,index,forwarded)) {
-                    spds_wifi_send_relay(&radio,forwarded);
+                if(spds_relay_prepare(&relay,index,forwarded) &&
+                   spds_wifi_send_relay(&radio,forwarded)) {
+                    spds_relay_commit_forward(&relay,index);
                     break;
                 }
             }
@@ -545,7 +547,7 @@ int main(void) {
                         }
                         if(stored==SPDS_STORAGE_QUEUE_FULL) {
                             ++last_poll.invalid; /* no ACK: peer may retry after queue clear */
-                        } else if(stored>0) {
+                        } else if(stored==1) {
                             ++total;
                             ++last_poll.accepted;
                             save_puzzle_progress();
@@ -558,7 +560,7 @@ int main(void) {
                 }
             } else ++last_poll.invalid;
             draw();
-        } else if(radio_event==2) draw();
+        } else if(radio_event==2 || radio_event==3) draw();
         if (!roster_open && !puzzle_open && (down & KEY_Y)) {
             mii_picker_slot=mii_loaded && linked_mii.from_gallery?linked_mii.slot:0u;
             mii_picker_open=1;
