@@ -24,3 +24,12 @@ window is absent, the command fails. Do not upload Nintendo BIOS, firmware,
 private game dumps, or proprietary game assets.
 
 Screenshot images are intentionally not committed to the source repository.
+
+## Public-safe publication gate
+
+The capture helper now runs `tools/check_png.py` automatically and fails if the
+PNG is malformed or contains unapproved metadata chunks. **This is not a visual
+privacy check**: inspect the visible image for personal data, file paths, and
+proprietary content before attaching it to GitHub issue #33 or ChatGPT. A
+successful capture also does not establish that the ROM booted correctly; verify
+the visible game screens manually.
