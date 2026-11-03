@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Remove ancillary PNG chunks while preserving the exact compressed image pixels."""
+"""Remove ancillary PNG chunks while preserving exact compressed image pixels."""
 import pathlib
 import struct
 import sys
 import zlib
 
-SIG = b"\\x89PNG\\r\\n\\x1a\\n"
+SIG = b"\x89PNG\r\n\x1a\n"
 KEEP = {b"IHDR", b"IDAT", b"IEND"}
 
 def sanitize(path):
