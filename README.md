@@ -29,6 +29,8 @@ The room renderer is being migrated to AntonioND's Nitro Engine and its DSMA ske
 
 ### Full-game BlocksDS library plan
 
+NightFox's Lib is now provisioned and linked in the BlocksDS native-ROM build alongside Nitro Engine. CI verifies the installed header and static library. This is a build integration milestone only; the current libnds menus remain active until an NFLib screen prototype is implemented and tested. See [the full-game library plan](docs/BLOCKSDS_FULL_GAME_LIBRARY_PLAN.md).
+
 The expanded [library adoption plan](docs/BLOCKSDS_FULL_GAME_LIBRARY_PLAN.md) maps SDK facilities to the main UI, Mii and visitor presentation, Puzzle Swap, sound, storage, wireless, DSi camera, asset conversion and performance. Priority candidates beyond 3D are NightFox's Lib for 2D scenes, Maxmod for audio, and LibDSF for fonts. Woopsi is an optional C++ GUI experiment. Each integration must pass an example build and emulator test before replacing existing code.
 
 ### Additional library evaluation
