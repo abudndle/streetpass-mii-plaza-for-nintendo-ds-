@@ -17,6 +17,7 @@ typedef struct {
     unsigned sent;
     int last_error;
     SpdsAckTracker ack;
+    unsigned probe_frames; /* All raw frames processed in monitor mode, anonymous. */
     unsigned probe_hits; /* Anonymous probe matches; no MAC or console IDs stored. */
     unsigned plaza_probe_hits; /* Advertised service, NOT verified 3DS identity. */
     unsigned ack_sent;
