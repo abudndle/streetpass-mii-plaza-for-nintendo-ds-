@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static void exercise_board(void) {
@@ -104,6 +105,15 @@ static void exercise_navigation_transaction(void) {
     assert(spds_puzzle_commit_selection(blocker,&p,1u)==-1);
     assert(remove(blocker)==0);
     assert(p.selected==1u);
+    /* A pre-existing temp directory must not replace a valid saved cursor. */
+    char tempdir[256];
+    snprintf(tempdir,sizeof tempdir,"%s/puzzle.tmp",folder);
+    assert(mkdir(tempdir,0700)==0);
+    assert(spds_puzzle_move(&p,1,0));
+    assert(spds_puzzle_commit_selection(folder,&p,1u)==-1);
+    assert(p.selected==1u);
+    assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
+    assert(rmdir(tempdir)==0);
     assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
     char filename[256];
     snprintf(filename,sizeof filename,"%s/puzzle.swp",folder);
