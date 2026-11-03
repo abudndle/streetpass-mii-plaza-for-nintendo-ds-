@@ -52,6 +52,8 @@ jobs:
             api="https://api.github.com/repos/$repository/releases/latest"
             metadata="$(curl --fail --location --silent --show-error --retry 3 --max-time 30 "$api")"
             tag="$(jq -r '.tag_name // empty' <<<"$metadata")"
+            echo "Official release $repository tag=$tag available assets:"
+            jq -r '.assets[]?.name' <<<"$metadata" | sed 's/^/  /'
             if [[ "$name" == 'AzaharPlus' && "$tag" != 'AZAHAR_PLUS_2126_2_A' ]]; then
               echo "::warning::AzaharPlus tag $tag has not been security-reviewed for this workflow; skipping"
               continue
