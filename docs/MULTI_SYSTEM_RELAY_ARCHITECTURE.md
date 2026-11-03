@@ -67,3 +67,25 @@ Keep three layers explicit:
 - Report each path independently: DS/DSi↔DS/DSi, 3DS↔3DS native, DS/DSi↔3DS companion, and DS/DSi↔unmodified 3DS native Plaza.
 
 **Mixed-family exchange remains unverified.** This requirement does not override protocol boundaries.
+
+## Mandatory unmodified-3DS multi-system acceptance
+
+The user's requested release behavior is **automatic native StreetPass between multiple DS/DSi systems and multiple completely unmodified 3DS systems**. No 3DS homebrew, CFW, SD file copy or external companion may be substituted for this acceptance requirement.
+
+Do not confuse **relay forwarding** (a node passes a visitor onward) with **replay** (the same visitor or nonce arrives again). Forwarding must preserve origin and consent, while replay must not generate duplicate visits or unbounded forwarding loops.
+
+### Independent proof matrix
+
+| Path | Required proof | Current state |
+| --- | --- | --- |
+| DS A ↔ DS B ↔ DS C | Wireless host/client association, bidirectional receipt, bounded forwarding, durable ACK, deduplication and restart recovery | Unverified on physical hardware |
+| 3DS A ↔ 3DS B ↔ 3DS C | Native CECD visitor receipt on unmodified consoles, without a companion | Unverified in this project |
+| DS A → unmodified 3DS A/B | Original retail Mii Plaza receives DS-origin visitor automatically | Blocked / no proven supported interface |
+| Unmodified 3DS A/B → DS A/B | DS Plaza receives a native 3DS visitor automatically | Blocked / no proven supported interface |
+| Mixed multi-hop | A consented visitor traverses at least two nodes, no duplicate visits, expires on hop/time limits, survives restart | Blocked until native bridge proven |
+
+Test with **at least three DS/DSi and three stock 3DS units** in a shared RF environment, separately verifying direct exchange, multi-node forwarding, duplicate suppression, queue capacity, radio reconnection, power-cycle persistence, and privacy. Record sanitized before/after encounter counts and bidirectional evidence for every claimed path. An emulator boot, packet sniff, manual import or ordinary Wi-Fi association is insufficient.
+
+### Protocol feasibility gate
+
+Before attempting native mixed-family radio delivery, establish from authorized documentation and non-sensitive testing that DS/DSi hardware and software can participate in the required 3DS discovery, CECD transport and any authentication. If this cannot be established, retain a visible hardware/protocol blocker. Historical Nintendo Zone StreetPass relay points do not provide a currently available generic CECD gateway. Never represent an optional 3DS homebrew companion as meeting the unmodified-3DS requirement.
