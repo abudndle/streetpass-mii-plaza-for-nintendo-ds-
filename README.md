@@ -27,6 +27,10 @@ No SD file can autonomously run in the background of unrelated DS ROMs.
 
 The room renderer is being migrated to AntonioND's Nitro Engine and its DSMA skeletal-animation support rather than a project-written 3D engine. The native BlocksDS build links `-lNE`; the renderer loads DSM/DSA visitor assets from `streetpass-plaza/models/` and retains the existing Mii records and Plaza controls. Authentic per-Mii model conversion and original Plaza assets remain separate unfinished work. See [Nitro Engine integration](docs/NITRO_ENGINE_INTEGRATION.md).
 
+### Additional library evaluation
+
+The BlocksDS CI ROM build now provisions the official `blocksds-ulibrary` package beside Nitro Engine. uLibrary is reserved for a separately verified 2D menu/widget adapter; it is not yet linked into the active Nitro Engine renderer because both can contend for the DS 3D hardware. libslim has been reviewed but is not substituted for libfat yet: its published build uses legacy devkitARM rules and it is not libfat-compatible, while the current app depends on `fatGetDefaultDrive()` and explicit `fat:/` paths. See [the engine and filesystem integration notes](docs/NITRO_ENGINE_INTEGRATION.md).
+
 ## Current verified progress
 
 - Bootable-format `.nds` homebrew **compiles** using the official BlocksDS Docker image; GitHub Actions uploads the `streetpass-plaza-ds-homebrew` artifact. A melonDS screenshot-capture workflow exists; emulator launch/screenshot artifacts must be checked per run. Cross-emulator StreetPass/NetPass tests remain outstanding.
