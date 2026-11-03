@@ -1,7 +1,7 @@
 name: Validate DS Plaza
 on:
   push:
-    branches: [main, 'dev/**', 'feature/**']
+    branches: [main, 'dev/**', 'feature/**', 'port/**']
   pull_request:
   workflow_dispatch:
   schedule:
