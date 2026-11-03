@@ -81,6 +81,26 @@ jobs:
           assert all(value == 'NOT_RUN' for value in result['tests'].values())
           print('Emulator executable availability checked. No StreetPass exchange attempted.')
           PY
+      - name: Summarize installation status and fail unmet milestone
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = Path('emulator-preflight.json')
+          if not report.is_file():
+              raise SystemExit('No emulator preflight report produced')
+          data = json.loads(report.read_text(encoding='utf-8'))
+          with open(__import__('os').environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write('## Emulator installation readiness\\n\\n')
+              for name, result in data['emulators'].items():
+                  summary.write(f"- {name}: **{'INSTALLED' if result['installed'] else 'BLOCKED'}**\\n")
+              summary.write('\\nNo StreetPass exchange was performed.\\n')
+          missing = [name for name, result in data['emulators'].items() if not result['installed']]
+          if missing:
+              raise SystemExit('Required emulator executables missing: ' + ', '.join(missing))
+          PY
       - name: Upload sanitized diagnostic
         uses: actions/upload-artifact@v4
         with:
