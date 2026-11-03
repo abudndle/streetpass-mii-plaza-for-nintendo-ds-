@@ -13,17 +13,18 @@ int main(void){
     assert(decoded.sender_id==12&&r.received==1);
     assert(spds_relay_accept(&r,packet,sizeof packet,1700000002,&decoded)==0);
     assert(spds_relay_forward(&r,0,next));
+    assert(r.forwarded==1);
+    assert(!spds_relay_forward(&r,0,next)); /* no repeated rebroadcast */
     assert(spds_relay_decode(&decoded,&hops,&at,next,sizeof next));
     assert(hops==1&&at==1700000000);
     SpdsRelay second;spds_relay_init(&second,44,1);
     assert(spds_relay_accept(&second,next,sizeof next,1700000002,&decoded)==1);
     assert(spds_relay_forward(&second,0,next));
     assert(spds_relay_decode(&decoded,&hops,&at,next,sizeof next)&&hops==0);
+    assert(!spds_relay_forward(&second,0,next));
     SpdsRelay third;spds_relay_init(&third,88,1);
     assert(spds_relay_accept(&third,next,sizeof next,1700000003,&decoded)==1);
     assert(!spds_relay_forward(&third,0,next));
-    /* Four relays can preserve a visitor's origin across five systems.
-     * This is the homebrew transport budget, not native 3DS CECD. */
     SpdsRelay chain[5];
     uint8_t transit[SPDS_RELAY_SIZE],forwarded[SPDS_RELAY_SIZE];
     assert(spds_relay_encode(transit,&own,SPDS_RELAY_MAX_HOPS,1700000000));
@@ -35,18 +36,16 @@ int main(void){
         assert(spds_relay_accept(&chain[i],transit,sizeof transit,1700000001+i,&decoded)==0);
         if(i<4) {
             assert(spds_relay_forward(&chain[i],0,forwarded));
+            assert(!spds_relay_forward(&chain[i],0,forwarded));
             assert(spds_relay_decode(&decoded,&hops,&at,forwarded,sizeof forwarded));
             assert(hops==SPDS_RELAY_MAX_HOPS-i-1);
             memcpy(transit,forwarded,sizeof transit);
         } else assert(!spds_relay_forward(&chain[i],0,forwarded));
     }
     assert(!spds_relay_encode(packet,&own,SPDS_RELAY_MAX_HOPS+1,1700000000));
-    /* Malformed origin identity must never be written to the ledger. */
     SpdsRecord zero={0,1700000000,19,"Invalid"};
-    /* The underlying SPDS encoder already rejects zero sender IDs. */
     assert(!spds_relay_encode(packet,&zero,2,1700000000));
     assert(spds_relay_encode(packet,&own,2,1700000000));
-    /* Future timestamps are bounded without overflow at UINT32_MAX. */
     assert(spds_relay_accept(&r,packet,sizeof packet,0xffffffffu,&decoded)==-1);
     packet[13]^=1;
     assert(spds_relay_accept(&r,packet,sizeof packet,1700000004,&decoded)==-1);
@@ -54,6 +53,6 @@ int main(void){
     spds_relay_init(&r,24,0);
     assert(spds_relay_accept(&r,next,sizeof next,1700000003,&decoded)==1);
     assert(!spds_relay_forward(&r,0,packet));
-    puts("PASS: relay CRC, duplicate, 4-hop cap, multi-system identity, opt-in and malformed packet");
+    puts("PASS: relay CRC, duplicate, one-forward-per-visitor, 4-hop cap, identity and opt-in");
     return 0;
 }

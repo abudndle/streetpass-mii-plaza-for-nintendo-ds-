@@ -27,7 +27,6 @@ int spds_relay_accept(SpdsRelay *r,const uint8_t *p,unsigned n,uint32_t now,Spds
     if(!spds_relay_decode(&src,&hops,&when,p,n))return -1;
     if(src.sender_id==0)return -1;
     if(src.sender_id==r->own_id)return 0;
-    /* Reject stale/future traffic if both systems have reasonable RTC times. */
     if(now>=1577836800u && when>=1577836800u &&
        ((when>now && when-now>300u)||(now>when&&now-when>120u)))return -1;
     for(unsigned i=0;i<SPDS_RELAY_CACHE;i++){
@@ -36,15 +35,19 @@ int spds_relay_accept(SpdsRelay *r,const uint8_t *p,unsigned n,uint32_t now,Spds
            now>=seen->heard&&now-seen->heard<120u){r->duplicates++;return 0;}
     }
     SpdsRelaySeen *slot=&r->seen[r->next++%SPDS_RELAY_CACHE];
+    memset(slot,0,sizeof *slot);
     slot->sender=src.sender_id;slot->nonce=src.nonce;slot->heard=now;
     slot->hops=hops;memcpy(slot->packet,p,SPDS_RELAY_SIZE);
     r->received++;*out=src;return 1;
 }
-int spds_relay_forward(const SpdsRelay *r,unsigned i,uint8_t output[SPDS_RELAY_SIZE]){
+int spds_relay_forward(SpdsRelay *r,unsigned i,uint8_t output[SPDS_RELAY_SIZE]){
     if(!r||!r->enabled||!output||i>=SPDS_RELAY_CACHE)return 0;
-    const SpdsRelaySeen *s=&r->seen[i];
-    if(!s->sender||!s->hops)return 0;
+    SpdsRelaySeen *s=&r->seen[i];
+    if(!s->sender||!s->hops||s->forwarded)return 0;
     SpdsRecord src;unsigned hops;uint32_t when;
     if(!spds_relay_decode(&src,&hops,&when,s->packet,SPDS_RELAY_SIZE))return 0;
-    return spds_relay_encode(output,&src,hops-1u,when);
+    if(!spds_relay_encode(output,&src,hops-1u,when))return 0;
+    s->forwarded=1;
+    r->forwarded++;
+    return 1;
 }
