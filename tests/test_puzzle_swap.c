@@ -114,6 +114,19 @@ static void exercise_navigation_transaction(void) {
     assert(p.selected==1u);
     assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
     assert(rmdir(tempdir)==0);
+    /* A destination-directory collision fails at rename, not at fopen.
+     * The temporary file must be removed and the cursor rolled back. */
+    char destdir[256];
+    snprintf(destdir,sizeof destdir,"%s/puzzle.swp",folder);
+    assert(remove(destdir)==0);
+    assert(mkdir(destdir,0700)==0);
+    assert(spds_puzzle_move(&p,1,0));
+    assert(spds_puzzle_commit_selection(folder,&p,1u)==-1);
+    assert(p.selected==1u);
+    struct stat tempstat;
+    assert(stat(tempdir,&tempstat)==-1);
+    assert(rmdir(destdir)==0);
+    assert(spds_puzzle_save(folder,&p)==0);
     assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
     char filename[256];
     snprintf(filename,sizeof filename,"%s/puzzle.swp",folder);
