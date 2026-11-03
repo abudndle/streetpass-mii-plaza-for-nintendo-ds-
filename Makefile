@@ -51,5 +51,7 @@ test:
 	./build-host/test_puzzle_swap
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/streetpass_probe.c tests/test_streetpass_probe.c -o build-host/test_streetpass_probe
 	./build-host/test_streetpass_probe
+	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/room_touch.c tests/test_room_touch.c -o build-host/test_room_touch
+	./build-host/test_room_touch
 	python3 -m py_compile tools/inspect_ncch.py tools/romfs_inventory.py tools/private_asset_pipeline.py tools/verify_nds.py tools/index_darc.py
 	python3 -m unittest discover -s tests -p 'test_*.py' -v
