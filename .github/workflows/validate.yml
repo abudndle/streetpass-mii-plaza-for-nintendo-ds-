@@ -20,6 +20,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - name: Install Nitro Engine and DSMA BlocksDS package
+        run: |
+          set -euo pipefail
+          wf-pacman -Sy --noconfirm blocksds-nitroengine
+          test -s /opt/blocksds/external/nitro-engine/lib/libNE.a
+          test -s /opt/blocksds/external/nitro-engine/include/NEMain.h
       - name: Host codec and storage tests
         run: make test
       - name: Verify USA 3DS TMD parser with synthetic fixtures
