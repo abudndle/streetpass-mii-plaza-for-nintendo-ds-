@@ -5,6 +5,7 @@
 #include "relay.h"
 
 /* Independent application identifier; not a Nintendo game or CECD title ID. */
+#define SPDS_WIFI_MAX_CLIENTS 15
 #define SPDS_WIFI_GAME_ID 0x53504453u
 
 /*
@@ -24,7 +25,7 @@ static void copy_in_irq(int base, int len) {
     rx_ready = 1;
 }
 static void from_host(Wifi_MPPacketType type, int base, int len) {
-    if (type == WIFI_MPTYPE_DATA) copy_in_irq(base, len);
+    if (type == WIFI_MPTYPE_DATA || type == WIFI_MPTYPE_CMD) copy_in_irq(base, len);
 }
 static void from_client(Wifi_MPPacketType type, int aid, int base, int len) {
     (void)aid;
@@ -46,10 +47,10 @@ int spds_wifi_start(SpdsWireless *r, enum SpdsWirelessMode mode) {
     int result;
     if (mode == SPDS_WIFI_HOST) {
         Wifi_MultiplayerFromClientSetPacketHandler(from_client);
-        result = Wifi_MultiplayerHostMode(1, 0, 0);
+        result = Wifi_MultiplayerHostMode(SPDS_WIFI_MAX_CLIENTS, SPDS_RELAY_SIZE, SPDS_RELAY_SIZE);
     } else {
         Wifi_MultiplayerFromHostSetPacketHandler(from_host);
-        result = Wifi_MultiplayerClientMode(0);
+        result = Wifi_MultiplayerClientMode(SPDS_RELAY_SIZE);
     }
     if (result < 0) {
         r->last_error = result;
@@ -79,8 +80,9 @@ int spds_wifi_queue_ack(SpdsWireless *r,uint64_t sender,uint32_t nonce) {
 }
 static int tx_frame(SpdsWireless *r,const uint8_t *frame,unsigned length) {
     if(r->mode==SPDS_WIFI_HOST) {
-        if(!(Wifi_MultiplayerGetClientMask() & (1u<<1))) return 0;
-        return Wifi_MultiplayerHostToClientDataTxFrame(1,frame,length)>=0;
+        if(Wifi_MultiplayerGetNumClients()<=0) return 0;
+        /* CMD frames are delivered to every associated client. */
+        return Wifi_MultiplayerHostCmdTxFrame(frame,length)>=0;
     }
     if(r->mode==SPDS_WIFI_CLIENT &&
        Wifi_AssocStatus()==ASSOCSTATUS_ASSOCIATED)

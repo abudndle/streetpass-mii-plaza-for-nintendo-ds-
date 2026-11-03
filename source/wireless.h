@@ -4,7 +4,7 @@
 #include "radio_ack.h"
 #include <stdint.h>
 
-/* Experimental DSWifi direct DS-local multiplayer. Not native 3DS CECD. */
+/* Experimental DSWifi host-and-hub transport for up to 15 DS/DSi clients. Not native 3DS CECD. */
 enum SpdsWirelessMode { SPDS_WIFI_OFF, SPDS_WIFI_HOST, SPDS_WIFI_CLIENT };
 enum SpdsWirelessPhase { SPDS_PHASE_OFF, SPDS_PHASE_START,
                          SPDS_PHASE_SCANNING, SPDS_PHASE_CONNECTING,

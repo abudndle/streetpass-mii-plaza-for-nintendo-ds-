@@ -1,21 +1,33 @@
-# Experimental DS ↔ DS local wireless
+# Experimental DS / DSi local wireless
 
-The opt-in DSWifi transport in `source/wireless.c` is **unverified on physical hardware**. It does not implement the 3DS StreetPass/CECD service, and cannot be expected to work with an unmodified 3DS.
+The opt-in DSWifi transport uses a local multiplayer host-and-clients topology. BlocksDS documents support for up to 15 client consoles per host. A host sends CMD frames to all associated clients; each client sends DATA frames to the host. Clients do not communicate directly with one another. The Plaza host is therefore a forwarding hub, not a peer-to-peer mesh.
 
-## Testing with two DS/DSi consoles
+## Implementation in this branch
 
-1. Launch the same homebrew `.nds` on two compatible DS/DSi systems and make sure FAT storage is writable.
-2. Press **L** on console 1 for Host; **R** on console 2 for Join/Scan.
-3. Keep the systems close, awake and within radio range. Wait for packets; records should be saved to each device's `encounters.tsv`.
-4. Press **SELECT** to turn off local radio. **B** exits the application.
-5. Report physical console models, flashcart/launcher type, firmware, ROM commit, and results, including logs and repeated passes.
+- Host mode is configured for up to 15 clients, with fixed 80-byte SPDR relay payload capacity in both directions.
+- Host visitor and ACK frames use the DSWifi host CMD broadcast operation, delivered to all connected clients.
+- Client-to-host frames use the DSWifi client DATA operation.
+- Host receive callback accepts client DATA; client receive callback accepts host CMD frames.
+- The relay cache forwards only after the visitor has been durably stored. Host broadcast plus per-node duplicate suppression and hop budget enables multi-hop propagation through multiple host groups, subject to scheduling.
+- This is not native 3DS StreetPass/CECD and does not make DS software execute as a background service.
 
-Payload: the 80-byte versioned SPDR envelope containing the 64-byte SPDS homebrew packet (see DS_RELAY.md and PROTOCOL.md); the host uses its own unique game ID and beacon, rather than impersonating retail Nintendo games. Only **one client** per host in this experiment. Transfers are unauthenticated: send only a nickname you consent to share. Do not exchange private Mii identity fields or full official avatar data yet.
+## Physical test plan
 
-## Limitations and next steps
+1. Build latest ROM and test one host plus one client.
+2. Test one host plus three clients simultaneously. Each client should receive the same consented synthetic visitor and store it once.
+3. Test up to 15 clients only after the three-client test is stable.
+4. Test two host groups linked by a client that alternates host/client roles; verify bounded multi-hop delivery, duplicates, ACK behavior, queue persistence and reconnection.
+5. Record console models, DSWifi version, app commit, client counts and redacted logs. Host tests and compilation do not prove physical radio operation.
 
-- Manual host/join avoids two clients indefinitely scanning without a host.
-- Add tested automatic host-election and scan/retry cycles to support unattended nearby exchanges while the *homebrew menu itself* remains running.
-- Verify lid-close behavior; a stopped CPU or wireless chipset prevents exchanges.
-- Use a 3DS companion or another proven bridge for DS ↔ 3DS; DS packet radio is not equivalent to 3DS StreetPass.
-- Add real-hardware ACK, jitter, failure recovery and security before declaring fully functional.
+## Limits
+
+- DSWifi local multiplayer supports up to 15 clients on one host. Clients communicate with the host, not directly with other clients.
+- A DS hub can relay only while the Plaza application is active and its radio is running.
+- Larger deployments require multiple host groups and store-and-forward between groups.
+- DS/DSi transport remains experimental until verified on real consoles.
+- Unmodified 3DS systems use native StreetPass separately. No DS-to-stock-3DS native bridge is implemented or verified.
+
+## References
+
+- [BlocksDS DSWifi local multiplayer guide](https://blocksds.skylyrac.net/dswifi/md_documentation_2local__multiplayer__mode.html)
+- [BlocksDS DSWifi multiplayer API](https://blocksds.skylyrac.net/dswifi/group__dswifi9__mp.html)
