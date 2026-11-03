@@ -1,24 +1,11 @@
-# Plaza visitor roster — first interactive UI milestone
+# Plaza visitor roster — population and browsing
 
-The Plaza now offers a dedicated **X: View Plaza visitors** screen. It
-loads validated, cached Mii Maker DS visitor packets from the existing FAT
-storage, not from the private 3DS save. It does not change Mii appearance,
-ownership or transfer data.
+The Plaza population is a separate persistent collection from the incoming StreetPass wait queue.
 
-On the roster screen: UP/DOWN selects, LEFT/RIGHT changes pages (three
-visitors each), A reveals cached name and creator, B closes details or
-returns to the main inbox. X toggles the roster, START refreshes the
-stored visitors. Tapping a listed row selects a visitor; tapping the
-lower left/right navigation areas changes pages. Selection is clamped
-if a visitor file disappears. Existing L/R manual radio and SELECT radio-off
-controls remain available, but are not changed by roster navigation.
+- **Plaza population capacity: 3,000 Miis maximum.** The visitor browser must be able to display and page through the full saved population, not just the most recent three entries.
+- **Incoming wait queue: 10 visitors maximum.** This is the pending visitor limit before the player enters/clears the Plaza queue. Clearing the wait queue must not erase the saved 3,000-Mii Plaza population or encounter history.
+- The roster UI currently renders three visitor entries per page; pagination must cover all saved entries up to the 3,000-Mii capacity.
 
-The state model lives in `plaza_roster.[ch]` and is host-testable without
-Nintendo libraries. `spds_visitor_list_page` extends the existing read-only
-validated visitor enumeration with an offset (the old list API is preserved).
-`make test` tests empty rosters, page bounds, selection, shrinking storage,
-and the file pagination contract. `make` in BlocksDS compiles the ROM.
+The current roster state model is host-testable. The existing visitor browser is a functional text-mode prototype, not the original 3D Plaza renderer. Capacity enforcement, 3,000-entry enumeration/pagination, persistence and performance testing remain implementation/verification work; the current code must not be described as already proven to support 3,000 entries.
 
-This is a **functional text-mode visitor browser**, not an original Mii
-3D-room renderer or complete StreetPass Mii Plaza gameplay port. Nintendo
-assets and private CECD saves are not included.
+Nintendo proprietary assets and private CECD saves are not included.
