@@ -13,6 +13,7 @@ static NE_Model *visitor_models[SPDS_ROOM_VISITORS];
 static NE_Animation *visitor_idle;
 static int renderer_active;
 static unsigned visible_visitors;
+static unsigned visible_visitors;
 static unsigned selected_visitor;
 static unsigned animation_frame;
 
@@ -133,6 +134,11 @@ void spds_plaza_3d_set_visitors(unsigned count, unsigned selected)
 {
     visible_visitors = count > SPDS_ROOM_VISITORS ? SPDS_ROOM_VISITORS : count;
     selected_visitor = selected < visible_visitors ? selected : 0;
+}
+
+void spds_plaza_3d_set_visible(unsigned count)
+{
+    visible_visitors = count > SPDS_ROOM_VISITORS ? SPDS_ROOM_VISITORS : count;
 }
 
 void spds_plaza_3d_render(void)
