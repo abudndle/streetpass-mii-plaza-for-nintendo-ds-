@@ -431,7 +431,10 @@ int main(void) {
             if(changed) draw();
         }
         if(room_open) {
-            if(spds_plaza_3d_active()) spds_plaza_3d_render();
+            if(spds_plaza_3d_active()) {
+                spds_plaza_3d_set_visitors((unsigned)visitor_count, room_selected);
+                spds_plaza_3d_render();
+            }
             if(down & KEY_B) {
                 if(spds_plaza_3d_active()) {
                     spds_plaza_3d_leave();
