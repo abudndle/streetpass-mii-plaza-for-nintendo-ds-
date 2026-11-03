@@ -43,7 +43,7 @@ jobs:
           from datetime import datetime, timezone
           from urllib.parse import quote
 
-          CONFIG = json.loads(r'''{"allowedPrefixes":["agent/free-"],"allowedPairs":[["source/arrival_notice.c","tests/test_arrival_notice.c"],["source/radio_ack.c","tests/test_radio_ack.c"],["source/discovery.c","tests/test_discovery.c"]],"requiredWorkflows":["validate.yml"]}''')
+          CONFIG = json.loads(r'''{"allowedPrefixes":["agent/free-","agent/run-"],"allowedPairs":[["source/arrival_notice.c","tests/test_arrival_notice.c"],["source/radio_ack.c","tests/test_radio_ack.c"],["source/discovery.c","tests/test_discovery.c"]],"requiredWorkflows":["validate.yml"]}''')
           repo = os.environ['GH_REPO']
           tracking_issue = 69
 
