@@ -13,6 +13,47 @@
 
 Nintendo ended SpotPass and other 3DS online functionality on **April 8, 2024**. Nintendo's system-update history documents the historical StreetPass relay feature at Nintendo Zone locations; Nintendo's original relay-point design used server-backed store-and-forward. Do not assume that discontinued Nintendo service remains available. A generic Wi-Fi AP, local server or SPDR broadcast is not automatically a native StreetPass relay point.
 
+## Native 3DS protocol findings (research; not an implementation)
+
+The passive parser in `source/streetpass_probe.c` recognizes the public
+continuous-scan probe and the Mii Plaza service identifier
+`00 02 08 00 00`. This is discovery evidence only: it does not establish
+a StreetPass session, authenticate a peer, decrypt traffic, or submit a
+Mii Plaza message to CECD.
+
+The documented native exchange has additional layers:
+
+- 3DS systems advertise enabled StreetPass services in 802.11 probe requests.
+  The Mii Plaza service is identified by `00 02 08 00 00`; service flags
+  describe send/receive mode.
+- After discovery, peers perform a directed wireless handshake and use
+  WPA2/CCMP-protected traffic. The CCMP key is derived by the 3DS CECD
+  service from console identifiers and MAC addresses using platform
+  cryptographic services; merely copying the public probe fields is not
+  sufficient to derive a valid session key on a DS.
+- The encrypted exchange uses the documented SPTCP/SPMTP layers.
+- Mii Plaza's application message is a CECD StreetPass message with a
+  common CECD header and a title-specific payload. It is not the project's
+  64-byte SPDS record or the SPDR relay packet.
+
+Therefore the current DS parser must remain labelled **passive discovery
+only**. A future native interoperability milestone requires reproducible,
+legally obtained test captures from systems the tester owns, a documented
+implementation of the full handshake/encryption and Mii Plaza message
+container, and end-to-end delivery in both directions. Do not add guessed
+key derivation, fabricated console identifiers, or claim CECD delivery
+from a matching beacon.
+
+Research references:
+- 3dbrew, StreetPass protocol and encrypted exchange:
+  https://www.3dbrew.org/wiki/StreetPass
+- 3dbrew, CECD service interface:
+  https://www.3dbrew.org/wiki/CECD_Services
+- 3dbrew, StreetPass Mii Plaza message format:
+  https://www.3dbrew.org/wiki/StreetPass_Mii_Plaza/StreetPass_Message_Format
+- Nintendo support, StreetPass is compatible with Nintendo 3DS software:
+  https://en-americas-support.nintendo.com/app/answers/detail/a_id/404/p/50/c/950
+
 ## Cross-platform boundary
 
 SPDR packets are not CECD records or native 3DS StreetPass frames. Stock 3DS firmware does not understand this DS application protocol. **Automatic DS ↔ unmodified-3DS Mii Plaza delivery is blocked/unproven:** no currently available, supported stock-firmware interface has been demonstrated to deliver arbitrary DS-origin visitors into native Mii Plaza and return native 3DS visitors to this DS app.
