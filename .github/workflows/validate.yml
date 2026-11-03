@@ -48,6 +48,8 @@ jobs:
         run: make
       - name: Validate output exists and is not empty
         run: test -s streetpass-plaza-ds.nds
+      - name: Validate NDS header and ARM executable bounds
+        run: python3 tools/verify_nds.py streetpass-plaza-ds.nds
       - name: Upload homebrew ROM only
         uses: actions/upload-artifact@v4
         with:
