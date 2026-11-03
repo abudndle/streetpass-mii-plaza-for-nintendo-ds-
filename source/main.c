@@ -14,6 +14,7 @@
 #include "bark_mode.h"
 #include "relay.h"
 #include "plaza_roster.h"
+#include "plaza_scene.h"
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
 
@@ -32,6 +33,7 @@ static SpdsVisitorStats visitor_stats;
 static SpdsMii visitors_on_screen[3];
 static int visitor_count;
 static SpdsPlazaRoster roster;
+static SpdsPlazaScene visible_scene;
 static int roster_open;
 static int room_open;
 static int mii_picker_open;
@@ -113,10 +115,13 @@ static void refresh_roster(void) {
     int total_visitors=spds_visitor_list(save_dir,NULL,0);
     if (total_visitors<0) total_visitors=0;
     spds_plaza_roster_set_count(&roster,(unsigned)total_visitors);
+    if (!spds_plaza_scene_build(&roster,&visible_scene)) {
+        visitor_count=0;
+        return;
+    }
     int page_total=spds_visitor_list_page(save_dir,
-         spds_plaza_roster_page(&roster)*SPDS_PLAZA_PAGE_SIZE,
-         visitors_on_screen,SPDS_PLAZA_PAGE_SIZE);
-    unsigned page_start=spds_plaza_roster_page(&roster)*SPDS_PLAZA_PAGE_SIZE;
+         visible_scene.first,visitors_on_screen,visible_scene.count);
+    unsigned page_start=visible_scene.first;
     visitor_count=page_total>0 && (unsigned)page_total>page_start ?
                   (int)((unsigned)page_total-page_start) : 0;
     if(visitor_count>(int)SPDS_PLAZA_PAGE_SIZE)
