@@ -208,7 +208,7 @@ static void draw(void) {
            sleep_override?"EXPERIMENTAL":"Off");
     printf("\x1b[13;2H3DS: no native CECD link");
     printf("\x1b[14;2HBackground: menu process only");
-    printf("\x1b[15;2H3DS probes %u Plaza %u",radio.probe_hits,radio.plaza_probe_hits);
+    printf("\x1b[15;2HRaw %u 3DS %u Plaza %u",radio.probe_frames,radio.probe_hits,radio.plaza_probe_hits);
     if(puzzle_ready) printf("\x1b[21;2HPuzzle pieces: %u/%u",
                            spds_puzzle_completed(&puzzle),SPDS_PUZZLE_PIECES);
     printf("\x1b[16;2H%s",roster_open?"Plaza roster (page view):":"Recent saved visitor Miis:");
