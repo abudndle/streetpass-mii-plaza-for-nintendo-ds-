@@ -135,6 +135,35 @@ AzaharPlus documentation:
 - https://github.com/AzaharPlus/AzaharPlus/discussions/117 (ZipPass
   exchange and examples; community-provided archives are not test fixtures)
 
+## melonDS DLDI storage diagnosis and CI configuration
+
+The emulator screenshot from run 41725974560 shows the DS application
+reporting `Storage: FAT init failed`. This is a concrete emulator
+configuration failure, not evidence of a defect in the SD save-directory
+code: the standalone melonDS invocation previously used a clean profile
+without a DLDI device configured.
+
+Upstream melonDS exposes DLDI settings through its legacy configuration
+keys (`DLDIEnable`, `DLDIReadOnly`, `DLDIFolderSync`,
+`DLDIFolderPath`) and imports them when no TOML config is present.
+The CI workflow now creates a per-run home directory and a writable,
+isolated host folder, then provisions a legacy `melonDS.ini` enabling
+DLDI folder sync before launching the DS ROM. This gives libfat a host
+directory-backed DLDI device without mounting host disks or accessing
+personal SD data.
+
+The helper `tools/configure_melonds_dldi.py` and tests in
+`tests/test_configure_melonds_dldi.py` validate the generated settings
+and ensure all paths remain under the supplied temporary root. The
+emulator screenshot after this configuration must show storage as Ready
+before claiming persistence tests passed. A configured DLDI folder is
+not yet proof that save writes survive emulator restart; that requires a
+write/restart/read test using a synthetic profile and visitor fixture.
+
+Reference: upstream melonDS configuration declares the DLDI enable,
+read-only, folder-sync and folder-path settings in
+https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/Config.cpp
+
 ## Native 3DS exchange state machine (research milestone)
 
 The public protocol documentation separates native StreetPass into distinct
