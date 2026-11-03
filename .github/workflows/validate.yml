@@ -44,6 +44,8 @@ jobs:
       image: skylyrac/blocksds:slim-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Nitro Engine (DSMA animated model support)
+        run: wf-pacman -Sy --noconfirm blocksds-nitroengine
       - name: Build native DS/DSi homebrew ROM
         run: make
       - name: Validate output exists and is not empty
