@@ -1,6 +1,6 @@
 # ARM9-only BlocksDS ROM; source/protocol and source/storage also compile on host.
 BLOCKSDS ?= /opt/blocksds/core
-BLOCKSDSEXT ?= /opt/blocksds/external
+BLOCKSDSEXT ?= /opt/wonderful/thirdparty/blocksds/external
 WONDERFUL_TOOLCHAIN ?= /opt/wonderful
 
 NAME := streetpass-plaza-ds
