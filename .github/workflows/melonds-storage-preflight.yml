@@ -1,0 +1,24 @@
+name: melonDS storage preflight
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/melonds-storage-preflight.yml'
+      - 'tools/configure_melonds_dldi.py'
+      - 'tests/test_configure_melonds_dldi.py'
+permissions:
+  contents: read
+jobs:
+  storage-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test isolated DLDI configuration
+        run: python3 -m unittest discover -s tests -p 'test_configure_melonds_dldi.py' -v
+      - name: Generate fresh emulator profile and verify writable folder
+        run: |
+          set -euo pipefail
+          python3 tools/configure_melonds_dldi.py --home "$RUNNER_TEMP/melon-home" --sd-folder "$RUNNER_TEMP/melon-sd"
+          test -d "$RUNNER_TEMP/melon-sd"
+          test -s "$RUNNER_TEMP/melon-home/.config/melonDS/melonDS.ini"
+          test -w "$RUNNER_TEMP/melon-sd"
