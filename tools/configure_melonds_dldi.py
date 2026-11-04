@@ -21,6 +21,8 @@ def configure(home: Path, sd_folder: Path) -> Path:
         "DLDIFolderSync": "1",
         "DLDIFolderPath": str(sd_folder),
     }
+    if config.is_symlink():
+        raise ValueError("Refusing to modify a symlinked melonDS configuration")
     original = config.read_text(encoding="utf-8").splitlines(keepends=True) if config.exists() else []
     output = []
     seen = set()
