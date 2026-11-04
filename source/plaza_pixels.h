@@ -1,5 +1,5 @@
-#ifndef SPDS_PLAZA_PIXELS_H
-#define SPDS_PLAZA_PIXELS_H
+#ifndef SPDS_PLAZA_PIXELS_HEADER_H
+#define SPDS_PLAZA_PIXELS_HEADER_H
 #include <stdint.h>
 /* Platform-neutral RGB555 drawing surface for a 256x192 DS top screen.
  * The caller owns VRAM and controls whether the surface is visible. */
