@@ -216,7 +216,7 @@ static void draw(void) {
     printf("\x1b[7;2HMaker Mii: %-20s",mii_loaded?linked_mii.name:"None linked");
     printf("\x1b[8;2HEncounters saved: %u", total);
     printf("\x1b[9;2HWaiting queue: %u/10",waiting_visitors);
-    printf("\\x1b[10;2HRadio: %-10.10s  Miis: %u", radio_status(),roster.count);
+    printf("\x1b[10;2HRadio: %-10.10s  Miis: %u", radio_status(),roster.count);
     printf("\x1b[11;2HAuto scan: %s",auto_radio?"Enabled":"Disabled");
     printf("\x1b[12;2HLid search: %-14s",
            sleep_override?"EXPERIMENTAL":"Off");
