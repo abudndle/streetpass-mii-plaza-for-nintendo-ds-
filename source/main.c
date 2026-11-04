@@ -336,9 +336,8 @@ int main(void) {
     volatile uint16_t *stage_pixels=(volatile uint16_t *)bgGetGfxPtr(stage_bg);
     spds_plaza_pixels_stage(stage_pixels);
 #ifdef SPDS_PRIVATE_ICON_AVAILABLE
-    for(unsigned y=0;y<40u;y++)
-        for(unsigned x=0;x<40u;x++)
-            stage_pixels[(8u+y)*256u+(208u+x)]=spds_private_plaza_icon[y*40u+x];
+    spds_plaza_pixels_blit(stage_pixels,208u,8u,
+                            spds_private_plaza_icon,40u,40u);
 #endif
     consoleInit(&top_screen, 0, BgType_Text4bpp, BgSize_T_256x256,
                 31, 8, true, true);

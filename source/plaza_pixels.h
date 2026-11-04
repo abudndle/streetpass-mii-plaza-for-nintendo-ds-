@@ -10,5 +10,10 @@ void spds_plaza_pixels_fill(volatile uint16_t *pixels,uint16_t color);
 void spds_plaza_pixels_rect(volatile uint16_t *pixels,
                             unsigned x,unsigned y,unsigned w,unsigned h,
                             uint16_t color);
+/* Copy RGB555 pixels into a 256-wide bitmap, clipped to the 256x192
+ * visible screen; source stride is the original image width. */
+void spds_plaza_pixels_blit(volatile uint16_t *pixels,
+                            unsigned x,unsigned y,
+                            const uint16_t *source,unsigned width,unsigned height);
 void spds_plaza_pixels_stage(volatile uint16_t *pixels);
 #endif

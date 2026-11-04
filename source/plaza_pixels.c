@@ -21,6 +21,20 @@ void spds_plaza_pixels_rect(volatile uint16_t *pixels,
         for(unsigned col=0;col<w;col++)
             pixels[(y+row)*SPDS_PLAZA_PIXELS_W+x+col]=color;
 }
+void spds_plaza_pixels_blit(volatile uint16_t *pixels,
+                            unsigned x,unsigned y,
+                            const uint16_t *source,unsigned width,unsigned height) {
+    if(!pixels || !source || !width || !height ||
+       x>=SPDS_PLAZA_PIXELS_W || y>=SPDS_PLAZA_PIXELS_H)return;
+    unsigned copy_w=width;
+    unsigned copy_h=height;
+    if(copy_w>SPDS_PLAZA_PIXELS_W-x)copy_w=SPDS_PLAZA_PIXELS_W-x;
+    if(copy_h>SPDS_PLAZA_PIXELS_H-y)copy_h=SPDS_PLAZA_PIXELS_H-y;
+    for(unsigned row=0;row<copy_h;row++)
+        for(unsigned col=0;col<copy_w;col++)
+            pixels[(y+row)*SPDS_PLAZA_PIXELS_W+x+col]=
+                source[row*width+col];
+}
 /* Original UI/model textures are NOT present in public builds. This
  * supplies only a simple stage background for eventual private assets. */
 void spds_plaza_pixels_stage(volatile uint16_t *pixels) {
