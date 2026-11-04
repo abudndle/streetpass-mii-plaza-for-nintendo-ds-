@@ -18,6 +18,12 @@
 #include "plaza_motion.h"
 #include "plaza_touch.h"
 #include "plaza_pixels.h"
+#if defined(__has_include)
+#if __has_include("private_plaza_icon.h")
+#include "private_plaza_icon.h"
+#define SPDS_PRIVATE_ICON_AVAILABLE 1
+#endif
+#endif
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
 
@@ -328,7 +334,13 @@ int main(void) {
     vramSetBankB(VRAM_B_MAIN_BG); /* Console tiles/maps separate from 128 KiB bitmap. */
     vramSetBankC(VRAM_C_SUB_BG);
     int stage_bg=bgInit(2,BgType_Bmp16,BgSize_B16_256x256,0,0);
-    spds_plaza_pixels_stage((volatile uint16_t *)bgGetGfxPtr(stage_bg));
+    volatile uint16_t *stage_pixels=(volatile uint16_t *)bgGetGfxPtr(stage_bg);
+    spds_plaza_pixels_stage(stage_pixels);
+#ifdef SPDS_PRIVATE_ICON_AVAILABLE
+    for(unsigned y=0;y<40u;y++)
+        for(unsigned x=0;x<40u;x++)
+            stage_pixels[(8u+y)*256u+(208u+x)]=spds_private_plaza_icon[y*40u+x];
+#endif
     consoleInit(&top_screen, 0, BgType_Text4bpp, BgSize_T_256x256,
                 31, 8, true, true);
     consoleInit(&bottom_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
