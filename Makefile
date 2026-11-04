@@ -48,6 +48,8 @@ test:
 	./build-host/test_plaza_motion
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/plaza_roster.c source/plaza_scene.c source/plaza_touch.c tests/test_plaza_touch.c -o build-host/test_plaza_touch
 	./build-host/test_plaza_touch
+	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/plaza_pixels.c tests/test_plaza_pixels.c -o build-host/test_plaza_pixels
+	./build-host/test_plaza_pixels
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/radio_ack.c source/protocol.c tests/test_radio_ack.c -o build-host/test_radio_ack
 	./build-host/test_radio_ack
 	cc -std=c11 -Wall -Wextra -Werror -pedantic -Isource source/arrival_notice.c tests/test_arrival_notice.c -o build-host/test_arrival_notice
