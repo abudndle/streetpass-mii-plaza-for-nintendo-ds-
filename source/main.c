@@ -17,6 +17,7 @@
 #include "plaza_scene.h"
 #include "plaza_motion.h"
 #include "plaza_touch.h"
+#include "plaza_pixels.h"
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
 
@@ -321,12 +322,15 @@ static void poll_now(void) {
     }
 }
 int main(void) {
-    videoSetMode(MODE_0_2D);
+    videoSetMode(MODE_5_2D);
     videoSetModeSub(MODE_0_2D);
     vramSetBankA(VRAM_A_MAIN_BG);
+    vramSetBankB(VRAM_B_MAIN_BG); /* Console tiles/maps separate from 128 KiB bitmap. */
     vramSetBankC(VRAM_C_SUB_BG);
-    consoleInit(&top_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
-                31, 0, true, true);
+    int stage_bg=bgInit(2,BgType_Bmp16,BgSize_B16_256x256,0,0);
+    spds_plaza_pixels_stage((volatile uint16_t *)bgGetGfxPtr(stage_bg));
+    consoleInit(&top_screen, 0, BgType_Text4bpp, BgSize_T_256x256,
+                31, 8, true, true);
     consoleInit(&bottom_screen, 3, BgType_Text4bpp, BgSize_T_256x256,
                 31, 0, false, true);
     spds_plaza_roster_init(&roster);
