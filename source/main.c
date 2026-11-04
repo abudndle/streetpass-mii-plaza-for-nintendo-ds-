@@ -15,6 +15,7 @@
 #include "relay.h"
 #include "plaza_roster.h"
 #include "plaza_scene.h"
+#include "plaza_motion.h"
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
 
@@ -170,16 +171,17 @@ static void draw(void) {
         printf("\x1b[12;2H+----------------------------+");
         printf("\x1b[13;2H  .  .  .  .  .  .  .  .");
         printf("\x1b[14;2H==============================");
-        for(int i=0;i<visitor_count && i<3;i++) {
-            unsigned x=2u+(unsigned)i*10u;
-            unsigned phase=(room_anim_frame/12u+(unsigned)i*3u)%6u;
-            x+=phase<3u?phase:5u-phase;
-            printf("\x1b[6;%uH%s",x,i==(int)room_selected?"   v":"    ");
-            printf("\x1b[7;%uH%s",x,i==(int)room_selected?" [O] ":"  O  ");
-            unsigned stride=(room_anim_frame/12u+(unsigned)i)%2u;
+        SpdsPlazaMotion motion;
+        if(!spds_plaza_motion_sample(&visible_scene,room_selected,room_anim_frame,&motion))
+            motion.count=0;
+        for(unsigned i=0;i<motion.count && i<(unsigned)visitor_count;i++) {
+            unsigned x=motion.actors[i].x;
+            printf("\x1b[6;%uH%s",x,motion.actors[i].selected?"   v":"    ");
+            printf("\x1b[7;%uH%s",x,motion.actors[i].selected?" [O] ":"  O  ");
+            unsigned stride=motion.actors[i].walk_frame;
             printf("\x1b[8;%uH%s",x,stride?" \\|/ ":" /|\\\\ ");
             printf("\x1b[9;%uH%s",x,stride?"  /| ":" / \\\\ ");
-            printf("\x1b[10;%uH%s",x,i==(int)room_selected?" ===== ":"       ");
+            printf("\x1b[10;%uH%s",x,motion.actors[i].selected?" ===== ":"       ");
             printf("\x1b[11;%uH%.9s",x,visitors_on_screen[i].name);
         }
         if(!visitor_count) printf("\x1b[9;2HNo visitors in this room");
