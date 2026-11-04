@@ -16,6 +16,7 @@
 #include "plaza_roster.h"
 #include "plaza_scene.h"
 #include "plaza_motion.h"
+#include "plaza_touch.h"
 #include "arrival_notice.h"
 #include "puzzle_swap.h"
 
@@ -196,7 +197,7 @@ static void draw(void) {
         printf("\x1b[16;2HD-Pad: Select visitor");
         printf("\x1b[17;2HA: Open visitor details");
         printf("\x1b[19;2HLEFT/RIGHT: Room page");
-        printf("\x1b[20;2HNo touch selection in room");
+        printf("\x1b[20;2HTouch: Visitor / page arrows");
         printf("\x1b[21;2HB: Back to visitor roster");
         return;
     }
@@ -418,6 +419,27 @@ int main(void) {
             if(changed) puzzle_detail=0;
             if(down & KEY_A) {puzzle_detail=1;changed=1;}
             if(changed) draw();
+        }
+        if(room_open && (down & KEY_TOUCH)) {
+            touchPosition touch;
+            touchRead(&touch);
+            unsigned slot=0;
+            SpdsPlazaTouchAction action=spds_plaza_touch_hit(
+                &visible_scene,(unsigned)touch.px,(unsigned)touch.py,&slot);
+            if(action==SPDS_PLAZA_TOUCH_VISITOR) {
+                room_selected=slot;
+                draw();
+                continue;
+            }
+            if(action==SPDS_PLAZA_TOUCH_PREV_PAGE ||
+               action==SPDS_PLAZA_TOUCH_NEXT_PAGE) {
+                int direction=action==SPDS_PLAZA_TOUCH_PREV_PAGE?-1:1;
+                spds_plaza_roster_change_page(&roster,direction);
+                room_selected=0;
+                refresh_roster();
+                draw();
+                continue;
+            }
         }
         if(room_open) {
             if(down & KEY_B) {room_open=0;roster_open=1;draw();continue;}
