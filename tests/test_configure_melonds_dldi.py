@@ -45,6 +45,18 @@ class DldiConfigTests(unittest.TestCase):
             self.assertIn(str((root / "sd-a").resolve()), a.read_text())
             self.assertNotIn(str((root / "sd-a").resolve()), b.read_text())
 
+    def test_refuse_symlinked_config_outside_isolated_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = root / "outside.ini"
+            outside.write_text("AudioVolume=33\n")
+            config = root / "home" / ".config" / "melonDS" / "melonDS.ini"
+            config.parent.mkdir(parents=True)
+            config.symlink_to(outside)
+            with self.assertRaises(ValueError):
+                configure(root / "home", root / "sd")
+            self.assertEqual(outside.read_text(), "AudioVolume=33\n")
+
     def test_reject_storage_parent_of_profile(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
