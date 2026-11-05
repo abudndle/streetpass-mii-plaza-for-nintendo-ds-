@@ -6,7 +6,7 @@ int main(void) {
     for(unsigned t=0;t<360;t++) {
         SpdsDiscoveryRole a=spds_discovery_role(17,t);
         SpdsDiscoveryRole b=spds_discovery_role(99877,t);
-        assert(a==SPDS_DISCOVER_HOST || a==SPDS_DISCOVER_CLIENT);
+        assert(a==SPDS_DISCOVER_HOST || a==SPDS_DISCOVER_CLIENT || (a == SPDS_DISCOVER_HOST && b == SPDS_DISCOVER_CLIENT));
         assert(b==SPDS_DISCOVER_HOST || b==SPDS_DISCOVER_CLIENT);
         if(a!=b) overlap++;
     }
