@@ -31,7 +31,7 @@ void spds_arrival_notice_show(SpdsArrivalNotice *s,const char *name,unsigned fra
     const unsigned char *p=(const unsigned char *)name;
     while(i+1u<SPDS_ARRIVAL_NAME_SIZE && *p) {
         if(*p>=32 && *p<=126) {
-            s->name[i++]=(char)*p++;
+            s->name[i++]=(char)*p++; if (*p >= 32 && *p <= 126) continue;
         } else {
             unsigned advance=utf8_advance(p);
             s->name[i++]='?';
