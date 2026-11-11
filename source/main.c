@@ -414,6 +414,9 @@ int main(void) {
             continue;
         }
         if(puzzle_open && puzzle_ready) {
+            /* Cursor changes must survive a restart, not just piece awards.
+             * Roll back in-memory selection if the atomic save fails. */
+            unsigned previous_selection=puzzle.selected;
             int changed=0;
             if(down & KEY_LEFT) changed=spds_puzzle_move(&puzzle,-1,0) || changed;
             if(down & KEY_RIGHT) changed=spds_puzzle_move(&puzzle,1,0) || changed;
@@ -430,7 +433,15 @@ int main(void) {
                     changed=spds_puzzle_select(&puzzle,row*SPDS_PUZZLE_COLS+col) || changed;
                 }
             }
-            if(changed) puzzle_detail=0;
+            if(puzzle.selected!=previous_selection) {
+                if(spds_puzzle_save(save_dir,&puzzle)!=0) {
+                    puzzle.selected=previous_selection;
+                    ++puzzle_save_errors;
+                } else {
+                    puzzle_detail=0;
+                }
+                changed=1;
+            }
             if(down & KEY_A) {puzzle_detail=1;changed=1;}
             if(changed) draw();
         }
