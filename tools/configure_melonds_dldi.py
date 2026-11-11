@@ -15,6 +15,9 @@ def configure(home: Path, sd_folder: Path) -> Path:
         raise ValueError("Emulator home must not be inside its shared storage folder")
     sd_folder.mkdir(parents=True, exist_ok=True)
     config_dir = home / ".config" / "melonDS"
+    # A symlinked parent can redirect a supposedly isolated emulator profile.
+    if (home / ".config").is_symlink() or config_dir.is_symlink():
+        raise ValueError("Refusing symlinked melonDS profile directories")
     config_dir.mkdir(parents=True, exist_ok=True)
     config = config_dir / "melonDS.ini"
     updates = {
