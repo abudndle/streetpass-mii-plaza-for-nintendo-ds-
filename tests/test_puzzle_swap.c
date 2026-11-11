@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static void exercise_board(void) {
@@ -84,9 +85,63 @@ static void exercise_disk(void) {
     remove(file);
     rmdir(folder);
 }
+
+static void exercise_navigation_transaction(void) {
+    char folder[]="/tmp/spds-nav-XXXXXX";
+    assert(mkdtemp(folder));
+    SpdsPuzzle p,loaded;
+    spds_puzzle_init(&p);
+    assert(spds_puzzle_save(folder,&p)==0);
+    assert(spds_puzzle_move(&p,1,0));
+    assert(spds_puzzle_commit_selection(folder,&p,0u)==1);
+    assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
+    assert(spds_puzzle_commit_selection(folder,&p,1u)==0);
+    /* Even invalid in-memory state must restore the prior visible cursor. */
+    p.selected=SPDS_PUZZLE_PIECES;
+    assert(spds_puzzle_commit_selection(folder,&p,1u)==-1);
+    assert(p.selected==1u);
+    assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
+    assert(spds_puzzle_move(&p,1,0));
+    /* A regular file cannot contain puzzle.tmp: deterministic I/O failure. */
+    char blocker[256];
+    snprintf(blocker,sizeof blocker,"%s/not-a-directory",folder);
+    FILE *blocked=fopen(blocker,"wb");
+    assert(blocked && fclose(blocked)==0);
+    assert(spds_puzzle_commit_selection(blocker,&p,1u)==-1);
+    assert(remove(blocker)==0);
+    assert(p.selected==1u);
+    /* A pre-existing temp directory must not replace a valid saved cursor. */
+    char tempdir[256];
+    snprintf(tempdir,sizeof tempdir,"%s/puzzle.tmp",folder);
+    assert(mkdir(tempdir,0700)==0);
+    assert(spds_puzzle_move(&p,1,0));
+    assert(spds_puzzle_commit_selection(folder,&p,1u)==-1);
+    assert(p.selected==1u);
+    assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
+    assert(rmdir(tempdir)==0);
+    /* A destination-directory collision fails at rename, not at fopen.
+     * The temporary file must be removed and the cursor rolled back. */
+    char destdir[256];
+    snprintf(destdir,sizeof destdir,"%s/puzzle.swp",folder);
+    assert(remove(destdir)==0);
+    assert(mkdir(destdir,0700)==0);
+    assert(spds_puzzle_move(&p,1,0));
+    assert(spds_puzzle_commit_selection(folder,&p,1u)==-1);
+    assert(p.selected==1u);
+    struct stat tempstat;
+    assert(stat(tempdir,&tempstat)==-1);
+    assert(rmdir(destdir)==0);
+    assert(spds_puzzle_save(folder,&p)==0);
+    assert(spds_puzzle_load(folder,&loaded)==1 && loaded.selected==1u);
+    char filename[256];
+    snprintf(filename,sizeof filename,"%s/puzzle.swp",folder);
+    assert(remove(filename)==0);
+    assert(rmdir(folder)==0);
+}
 int main(void) {
     exercise_board();
     exercise_disk();
+    exercise_navigation_transaction();
     puts("PASS: Puzzle Swap state, progress, safe persistence and corruption rejection");
     return 0;
 }

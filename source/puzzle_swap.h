@@ -20,4 +20,6 @@ int spds_puzzle_award_encounters(SpdsPuzzle *state,uint32_t total);
 int spds_puzzle_load(const char *base,SpdsPuzzle *state);
 /* Atomic temporary-file rename. Returns 0 on success, -1 otherwise. */
 int spds_puzzle_save(const char *base,const SpdsPuzzle *state);
+/* Returns 1 on committed change, 0 if unchanged, -1 on rollback. */
+int spds_puzzle_commit_selection(const char *base,SpdsPuzzle *state,unsigned previous);
 #endif
