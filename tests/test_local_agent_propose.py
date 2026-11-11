@@ -59,6 +59,19 @@ with tempfile.TemporaryDirectory() as directory:
     changed = module.validate_and_apply(base, focus, good)
     assert set(changed) == {task["source"], task["test"]}
     assert (base / task["test"]).read_text().count("assert(") == 2
+    # A behavior-regression test fails by assertion on old code, not setup errors.
+    command = ["python3", "-c",
+               "from pathlib import Path; assert 'improved' in Path("
+               + repr(task["source"]) + ").read_text()"]
+    assert module.regression_fails_on_old_source(
+        base, task["source"], orig_source.encode(), command)
+    assert (base / task["source"]).read_text() == "source token improved\n"
+    assert not module.regression_fails_on_old_source(
+        base, task["source"], orig_source.encode(), ["python3", "-c", "assert True"])
+    assert not module.regression_fails_on_old_source(
+        base, task["source"], orig_source.encode(),
+        ["python3", "-c", "raise RuntimeError('broken setup')"])
+    assert (base / task["source"]).read_text() == "source token improved\n"
     try:
         module.generate_plan(base, focus, "test", "https://example.invalid")
     except ValueError:
