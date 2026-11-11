@@ -80,6 +80,30 @@ class DldiConfigTests(unittest.TestCase):
                 configure(home, sd)
             self.assertEqual(config.stat().st_ino, inode)
 
+    def test_refuse_symlinked_profile_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = root / "outside"
+            outside.mkdir()
+            home = root / "home"
+            (home / ".config").mkdir(parents=True)
+            (home / ".config" / "melonDS").symlink_to(outside, target_is_directory=True)
+            with self.assertRaises(ValueError):
+                configure(home, root / "sd")
+            self.assertEqual(list(outside.iterdir()), [])
+
+    def test_refuse_symlinked_config_parent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = root / "outside"
+            outside.mkdir()
+            home = root / "home"
+            home.mkdir()
+            (home / ".config").symlink_to(outside, target_is_directory=True)
+            with self.assertRaises(ValueError):
+                configure(home, root / "sd")
+            self.assertEqual(list(outside.iterdir()), [])
+
     def test_reject_storage_parent_of_profile(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
