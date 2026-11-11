@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Configure isolated melonDS DLDI storage without erasing unrelated settings."""
 import argparse
+import os
+import tempfile
 from pathlib import Path
 
 DLDI_KEYS = ("DLDIEnable", "DLDIReadOnly", "DLDIFolderSync", "DLDIFolderPath")
@@ -39,7 +41,26 @@ def configure(home: Path, sd_folder: Path) -> Path:
     for key in DLDI_KEYS:
         if key not in seen:
             output.append(f"{key}={updates[key]}\n")
-    config.write_text("".join(output), encoding="utf-8")
+    updated = "".join(output)
+    if config.exists() and config.read_text(encoding="utf-8") == updated:
+        return config
+    # Write in the same directory so replacement is atomic on the local filesystem.
+    # Never leave a partially rewritten emulator profile after an interrupted write.
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=config_dir,
+                                         prefix=".melonDS.ini.", suffix=".tmp",
+                                         delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(updated)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if config.exists():
+            os.chmod(temporary, config.stat().st_mode & 0o777)
+        os.replace(temporary, config)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     return config
 
 
