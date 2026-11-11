@@ -488,7 +488,7 @@ int main(void) {
             draw();
         }
         if(roster_open && (down & KEY_START)) {
-            if(spds_storage_queue_clear(save_dir)==0) waiting_visitors=0;
+            /* Entering the room must never discard pending encounters. */
             room_selected=0;room_anim_frame=0;room_open=1;roster_open=0;draw();continue;
         }
         if(roster_open && (down & KEY_Y)) {
