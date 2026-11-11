@@ -70,6 +70,15 @@ class DldiConfigTests(unittest.TestCase):
             self.assertEqual(config.read_bytes(), previous)
             self.assertEqual(list(config.parent.glob(".melonDS.ini.*.tmp")), [])
 
+    def test_atomic_update_preserves_existing_permissions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home, sd = root / "home", root / "sd"
+            config = configure(home, sd)
+            config.chmod(0o600)
+            configure(home, root / "updated-sd")
+            self.assertEqual(config.stat().st_mode & 0o777, 0o600)
+
     def test_no_op_configuration_does_not_replace_profile(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
