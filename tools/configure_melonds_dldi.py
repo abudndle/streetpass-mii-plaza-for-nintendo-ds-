@@ -1,23 +1,69 @@
 #!/usr/bin/env python3
-"""Prepare isolated melonDS storage settings; never touch the user's profile."""
+"""Configure isolated melonDS DLDI storage without erasing unrelated settings."""
 import argparse
+import os
+import tempfile
 from pathlib import Path
+
+DLDI_KEYS = ("DLDIEnable", "DLDIReadOnly", "DLDIFolderSync", "DLDIFolderPath")
 
 
 def configure(home: Path, sd_folder: Path) -> Path:
     home = home.resolve()
     sd_folder = sd_folder.resolve()
+    if home == sd_folder or home.is_relative_to(sd_folder):
+        raise ValueError("Emulator home must not be inside its shared storage folder")
     sd_folder.mkdir(parents=True, exist_ok=True)
     config_dir = home / ".config" / "melonDS"
+    # A symlinked parent can redirect a supposedly isolated emulator profile.
+    if (home / ".config").is_symlink() or config_dir.is_symlink():
+        raise ValueError("Refusing symlinked melonDS profile directories")
     config_dir.mkdir(parents=True, exist_ok=True)
     config = config_dir / "melonDS.ini"
-    config.write_text(
-        "DLDIEnable=1\n"
-        "DLDIReadOnly=0\n"
-        "DLDIFolderSync=1\n"
-        f"DLDIFolderPath={sd_folder}\n",
-        encoding="utf-8",
-    )
+    updates = {
+        "DLDIEnable": "1",
+        "DLDIReadOnly": "0",
+        "DLDIFolderSync": "1",
+        "DLDIFolderPath": str(sd_folder),
+    }
+    if config.is_symlink():
+        raise ValueError("Refusing to modify a symlinked melonDS configuration")
+    original = config.read_text(encoding="utf-8").splitlines(keepends=True) if config.exists() else []
+    output = []
+    seen = set()
+    for line in original:
+        key = line.partition("=")[0].strip()
+        if key in updates:
+            if key not in seen:
+                output.append(f"{key}={updates[key]}\n")
+                seen.add(key)
+        else:
+            output.append(line)
+    if output and not output[-1].endswith("\n"):
+        output[-1] += "\n"
+    for key in DLDI_KEYS:
+        if key not in seen:
+            output.append(f"{key}={updates[key]}\n")
+    updated = "".join(output)
+    if config.exists() and config.read_text(encoding="utf-8") == updated:
+        return config
+    # Write in the same directory so replacement is atomic on the local filesystem.
+    # Never leave a partially rewritten emulator profile after an interrupted write.
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=config_dir,
+                                         prefix=".melonDS.ini.", suffix=".tmp",
+                                         delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(updated)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if config.exists():
+            os.chmod(temporary, config.stat().st_mode & 0o777)
+        os.replace(temporary, config)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     return config
 
 
