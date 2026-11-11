@@ -90,7 +90,7 @@ def validate_and_apply(root: Path, focus: str, plan: object) -> list[str]:
     next_asserts = Counter(c_assertions(proposed[task["test"]]))
     if previous_asserts - next_asserts:
         raise ValueError("Existing regression assertions must be preserved")
-    if not next_asserts - previous_asserts:
+    if not set(next_asserts) - set(previous_asserts):
         raise ValueError("Must add a distinct regression assertion")
     for path, content in proposed.items():
         if (len(content) > len(originals[path]) + 2800 or
