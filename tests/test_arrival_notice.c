@@ -7,6 +7,7 @@ int main(void) {
     assert(!spds_arrival_notice_tick(&notice));
     spds_arrival_notice_show(&notice,"Visitor",3);
     assert(!strcmp(notice.name,"Visitor") && notice.frames_left==3);
+    assert(notice.name[0] == 'V' && notice.name[1] == 'i' && notice.name[2] == 's' && notice.name[3] == 'i' && notice.name[4] == 't' && notice.name[5] == 'o' && notice.name[6] == 'r' && notice.name[7] == 0);
     assert(!spds_arrival_notice_tick(&notice) && notice.frames_left==2);
     assert(!spds_arrival_notice_tick(&notice) && notice.frames_left==1);
     assert(spds_arrival_notice_tick(&notice) && notice.frames_left==0);
