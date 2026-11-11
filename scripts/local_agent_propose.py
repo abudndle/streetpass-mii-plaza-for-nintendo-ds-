@@ -68,6 +68,8 @@ def validate_and_apply(root: Path, focus: str, plan: object) -> list[str]:
     assertion_pattern = r"(?m)^[ \t]*assert\s*\([^;\n]*\)\s*;[ \t]*(?://[^\n]*)?$"
     previous_asserts = set(re.findall(assertion_pattern, originals[task["test"]]))
     next_asserts = set(re.findall(assertion_pattern, proposed[task["test"]]))
+    if not previous_asserts.issubset(next_asserts):
+        raise ValueError("Existing regression assertions must be preserved")
     if not next_asserts - previous_asserts:
         raise ValueError("Must add a distinct regression assertion")
     for path, content in proposed.items():
