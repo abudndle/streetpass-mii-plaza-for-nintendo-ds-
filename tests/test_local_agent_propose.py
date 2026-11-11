@@ -31,8 +31,7 @@ with tempfile.TemporaryDirectory() as directory:
         {"summary": good["summary"], "changes": [
             dict(good["changes"][0], old="snippet missing"), good["changes"][1]]},
     ]
-    invalid.append({"summary": good["summary"], "changes": [
-        good["changes"][0], dict(good["changes"][1], new="assert(1); assert(2);")]})
+    # Inline assertions are now parsed correctly rather than rejected by formatting.
     # New assertions must not replace existing coverage with weaker checks.
     invalid.append({"summary": good["summary"], "changes": [
         good["changes"][0], dict(good["changes"][1], new="assert(2);")]})
