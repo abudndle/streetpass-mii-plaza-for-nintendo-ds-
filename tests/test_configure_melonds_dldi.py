@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 import sys
 
@@ -56,6 +57,28 @@ class DldiConfigTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 configure(root / "home", root / "sd")
             self.assertEqual(outside.read_text(), "AudioVolume=33\n")
+
+    def test_failed_atomic_replace_preserves_previous_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home, sd = root / "home", root / "sd"
+            config = configure(home, sd)
+            previous = config.read_bytes()
+            with patch("configure_melonds_dldi.os.replace", side_effect=OSError("disk error")):
+                with self.assertRaises(OSError):
+                    configure(home, root / "new-sd")
+            self.assertEqual(config.read_bytes(), previous)
+            self.assertEqual(list(config.parent.glob(".melonDS.ini.*.tmp")), [])
+
+    def test_no_op_configuration_does_not_replace_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home, sd = root / "home", root / "sd"
+            config = configure(home, sd)
+            inode = config.stat().st_ino
+            with patch("configure_melonds_dldi.os.replace", side_effect=AssertionError("unexpected replace")):
+                configure(home, sd)
+            self.assertEqual(config.stat().st_ino, inode)
 
     def test_reject_storage_parent_of_profile(self):
         with tempfile.TemporaryDirectory() as tmp:
