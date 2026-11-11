@@ -33,6 +33,11 @@ with tempfile.TemporaryDirectory() as directory:
     ]
     invalid.append({"summary": good["summary"], "changes": [
         good["changes"][0], dict(good["changes"][1], new="assert(1); assert(2);")]})
+    # New assertions must not replace existing coverage with weaker checks.
+    invalid.append({"summary": good["summary"], "changes": [
+        good["changes"][0], dict(good["changes"][1], new="assert(2);")]})
+    invalid.append({"summary": good["summary"], "changes": [
+        good["changes"][0], dict(good["changes"][1], new="assert(2);\nassert(3);")]})
     for bad in invalid:
         try:
             module.validate_and_apply(base, focus, bad)
