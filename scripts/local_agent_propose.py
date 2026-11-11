@@ -30,6 +30,26 @@ def c_tokens(source: str) -> tuple[str, ...]:
         raise ValueError("Unrecognized C source suffix")
     return tuple(tokens)
 
+def c_assertions(source: str) -> list[tuple[str, ...]]:
+    """Extract assert calls regardless of indentation, line breaks or inline placement."""
+    tokens = c_tokens(source)
+    found = []
+    for i in range(len(tokens) - 1):
+        if tokens[i:i + 2] != ("assert", "("):
+            continue
+        depth = 1
+        j = i + 2
+        while j < len(tokens) and depth:
+            if tokens[j] == "(":
+                depth += 1
+            elif tokens[j] == ")":
+                depth -= 1
+            j += 1
+        if depth or j >= len(tokens) or tokens[j] != ";":
+            raise ValueError("Malformed regression assertion")
+        found.append(tokens[i:j + 1])
+    return found
+
 def validate_and_apply(root: Path, focus: str, plan: object) -> list[str]:
     if focus not in TASKS or not isinstance(plan, dict):
         raise ValueError("Unknown focus or malformed response")
@@ -64,11 +84,13 @@ def validate_and_apply(root: Path, focus: str, plan: object) -> list[str]:
         raise ValueError("Both source and regression must be modified")
     if c_tokens(originals[task["source"]]) == c_tokens(proposed[task["source"]]):
         raise ValueError("Comment-only or formatting-only source edit")
-    # Duplicate existing assertions do not test a new behavior.
-    assertion_pattern = r"(?m)^[ \t]*assert\s*\([^;\n]*\)\s*;[ \t]*(?://[^\n]*)?$"
-    previous_asserts = set(re.findall(assertion_pattern, originals[task["test"]]))
-    next_asserts = set(re.findall(assertion_pattern, proposed[task["test"]]))
-    if not next_asserts - previous_asserts:
+    # Preserve all prior assertions, including inline/multiline/nested ones.
+    from collections import Counter
+    previous_asserts = Counter(c_assertions(originals[task["test"]]))
+    next_asserts = Counter(c_assertions(proposed[task["test"]]))
+    if previous_asserts - next_asserts:
+        raise ValueError("Existing regression assertions must be preserved")
+    if not set(next_asserts) - set(previous_asserts):
         raise ValueError("Must add a distinct regression assertion")
     for path, content in proposed.items():
         if (len(content) > len(originals[path]) + 2800 or

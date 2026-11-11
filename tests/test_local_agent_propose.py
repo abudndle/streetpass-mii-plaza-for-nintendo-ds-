@@ -31,8 +31,12 @@ with tempfile.TemporaryDirectory() as directory:
         {"summary": good["summary"], "changes": [
             dict(good["changes"][0], old="snippet missing"), good["changes"][1]]},
     ]
+    # Inline assertions are now parsed correctly rather than rejected by formatting.
+    # New assertions must not replace existing coverage with weaker checks.
     invalid.append({"summary": good["summary"], "changes": [
-        good["changes"][0], dict(good["changes"][1], new="assert(1); assert(2);")]})
+        good["changes"][0], dict(good["changes"][1], new="assert(2);")]})
+    invalid.append({"summary": good["summary"], "changes": [
+        good["changes"][0], dict(good["changes"][1], new="assert(2);\nassert(3);")]})
     for bad in invalid:
         try:
             module.validate_and_apply(base, focus, bad)
@@ -56,6 +60,22 @@ with tempfile.TemporaryDirectory() as directory:
             raise AssertionError("Cosmetic-only C edit accepted")
         assert (base / task["source"]).read_text() == orig_source
         assert (base / task["test"]).read_text() == orig_test
+    # Inline and multiline assertions are also protected from removal.
+    assert module.c_assertions("if (1) assert(1);\nassert(\n (2 + (3))\n);")
+    original_inline = "assert(1); assert(4);\n"
+    (base / task["test"]).write_text(original_inline)
+    bad_inline = {"summary": good["summary"], "changes": [
+        good["changes"][0],
+        {"path": task["test"], "old": original_inline,
+         "new": "assert(1); assert(2);\n"}]}
+    try:
+        module.validate_and_apply(base, focus, bad_inline)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Inline assertion removal was accepted")
+    assert (base / task["test"]).read_text() == original_inline
+    (base / task["test"]).write_text(orig_test)
     changed = module.validate_and_apply(base, focus, good)
     assert set(changed) == {task["source"], task["test"]}
     assert (base / task["test"]).read_text().count("assert(") == 2
